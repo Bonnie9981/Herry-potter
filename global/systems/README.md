@@ -6,3 +6,4 @@
 - [單一咒語紀錄模板](casting/spell-record-template.md)：逐咒語記錄每個角色的實力。
 - [魔藥製作評估](potions/README.md)：逐配方、逐批次記錄品質。
 - [能力區分](../academics/README.md)：天賦、知識、熟練度與成績分開。
+- [不同魔法效果型態與實力尺度](casting/effect-profiles.md)：按咒語效果衡量強度、精度、範圍、持續與控制。
