@@ -8,6 +8,8 @@ on:
       - "simulations/**"
       - "scripts/**"
       - "tests/**"
+      - "docs/自我反思與修正流程.md"
+      - "docs/模擬回合檢查清單.md"
       - ".github/workflows/world-quality.yml"
   pull_request:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - "simulations/**"
       - "scripts/**"
       - "tests/**"
+      - "docs/自我反思與修正流程.md"
+      - "docs/模擬回合檢查清單.md"
       - ".github/workflows/world-quality.yml"
   workflow_dispatch:
 
@@ -39,8 +43,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run deterministic world QA
-        run: python scripts/validate_world.py
+      - name: Run deterministic world QA and create report
+        run: python scripts/validate_world.py --report QA_REPORT.md
 
       - name: Run validator tests
         run: python -m unittest discover -s tests -v
+
+      - name: Upload QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hogwarts-world-qa-report
+          path: QA_REPORT.md
+          if-no-files-found: ignore
+          retention-days: 14
