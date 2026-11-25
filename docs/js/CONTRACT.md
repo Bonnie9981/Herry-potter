@@ -38,7 +38,11 @@ export function build(ctx) // ctx = { THREE, tex /* textures.js */, kit /* kit.j
 ## 紙片角色 `docs/js/sprites.js`
 - `new PaperCharacter(lookKey)`：`.group`（放到場景，腳底在原點）、`.walking`、`.face(screenDX, screenDY)`、`.update(dt, camYaw)`、`.addXray()`。
 - 單張雙面平面：背面由 GPU 自然鏡像，不另畫背面；角度以固定角速度連續旋轉，轉向時經過 90° 細線。
-- 外觀在 `LOOKS`，8 格圖集（0–1 待機、2–7 行走）。
+- 外觀在 `LOOKS`，6×3 格圖集（0–3 待機呼吸與眨眼、4–11 行走 8 格、12–17 互動舉杖）。
+- 行走步態依 `.group.position` 的實際位移推進（不滑步）；`.walking = true` 但沒移動時以 1.6 m/s 推算（原地踏步）。
+- 新增：`.setState("idle"|"walk"|"interact")`、`.interact(duration?) → Promise`（播一次互動動畫後回到原狀態）、`.state`、`.paperAngle`（度）、`.turnSpeed`（預設 720°/s）、`.freeze({angle, frame, bend})`（展示／除錯用，`null` 解除）。
+- 側向 90° 時會顯示白色紙緣（`.edge`），轉身與行走時紙張會微彎。
+- 示範與驗收頁：`docs/character-lab.html`（`?angles=1` 角度對照、`?yaw=90` 固定角度、`?frame=n` 固定畫格、`?look=professor`、`?zoom=3`、`?ui=0`）。
 
 ## NPC `docs/js/npcs.js`
 ```js
