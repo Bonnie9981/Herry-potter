@@ -22,7 +22,6 @@
 - 校長：阿不思・鄧不利多
 - 副校長：米奈娃・麥
 - 哈利・波特於 1991 年 9 月 1 日入學。
-- 洛夏在 SIMULATION 001 同年入學，屬於獨立角色，不會改寫原著人物背景；其行動可能造成世界線分歧。
 
 ## 官方參考
 - [霍格華茲科目](https://www.harrypotter.com/writing-by-jk-rowling/hogwarts-school-subjects)
