@@ -314,7 +314,7 @@ export function portraitDataURL(key) {
 
 // 紙片角色：一張雙面平面。背面由 GPU 自然呈現鏡像，不另畫背面。
 export class PaperCharacter {
-  constructor(key, { height = 1.85 } = {}) {
+  constructor(key, { height = 2.3 } = {}) {
     this.key = key;
     const base = characterAtlas(key);
     this.tex = base.clone();
@@ -323,7 +323,8 @@ export class PaperCharacter {
     const w = height * (FRAME_W / FRAME_H);
     const geo = new THREE.PlaneGeometry(w, height);
     geo.translate(0, height / 2 - height * 0.035, 0);
-    this.mat = new THREE.MeshStandardMaterial({ map: this.tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+    // 紙片受場景光影響，但保留 45% 自發光，維持貼紙的清晰可讀
+    this.mat = new THREE.MeshLambertMaterial({ map: this.tex, emissiveMap: this.tex, emissive: 0xffffff, emissiveIntensity: 0.45, alphaTest: 0.5, side: THREE.DoubleSide });
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.castShadow = true;
     this.mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: this.tex, alphaTest: 0.5 });
