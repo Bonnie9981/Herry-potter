@@ -64,7 +64,7 @@ scene.addEventListener("click",e=>{
 });
 const heldKeys=new Set();let keyLoop=null;
 function keyMove(){let dx=0,dy=0;if(heldKeys.has("ArrowLeft")||heldKeys.has("a"))dx-=1;if(heldKeys.has("ArrowRight")||heldKeys.has("d"))dx+=1;if(heldKeys.has("ArrowUp")||heldKeys.has("w"))dy-=1;if(heldKeys.has("ArrowDown")||heldKeys.has("s"))dy+=1;if(dx||dy){const n=Math.hypot(dx,dy);movePlayer(dx/n*1.25,dy/n*1.25)}}
-document.addEventListener("keydown",e=>{if(e.target.matches("input,textarea,select")||!$("#intro").hidden||!$("#map-modal").hidden===false)return;const k=e.key.length===1?e.key.toLowerCase():e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(k)){e.preventDefault();heldKeys.add(k);if(!keyLoop)keyLoop=window.setInterval(keyMove,45)}});
+document.addEventListener("keydown",e=>{if(e.target.matches("input,textarea,select")||!$("#intro").hidden||!$("#map-modal").hidden)return;const k=e.key.length===1?e.key.toLowerCase():e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(k)){e.preventDefault();heldKeys.add(k);if(!keyLoop)keyLoop=window.setInterval(keyMove,45)}});
 document.addEventListener("keyup",e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;heldKeys.delete(k);if(!heldKeys.size&&keyLoop){window.clearInterval(keyLoop);keyLoop=null;player.classList.remove("walking")}});
 window.addEventListener("blur",()=>{heldKeys.clear();if(keyLoop){window.clearInterval(keyLoop);keyLoop=null}player.classList.remove("walking")});
 const originalRender=render;
