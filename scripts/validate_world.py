@@ -13,12 +13,15 @@ REQUIRED = [
     "global/systems/simulation-engine.md",
     "global/systems/state-model.md",
     "global/systems/npc-model.md",
+    "global/systems/character-state-and-progression.md",
+    "global/systems/item-and-world-interaction.md",
     "global/rules/ability-system.md",
     "global/systems/talent/talent-catalogue.md",
     "docs/index.html",
     "docs/玩家使用指南.md",
     "docs/自我反思與修正流程.md",
     "docs/模擬回合檢查清單.md",
+    "docs/霍格華茲資料庫完整度稽核.md",
 ]
 
 
@@ -82,6 +85,12 @@ def validate(root: Path = ROOT):
         ),
         "global/systems/state-model.md": ("已知資訊", "物品", "時間", "事件", "快照"),
         "global/systems/npc-model.md": ("確定知道", "不會主動透露", "目前所在地", "玩家不在場"),
+        "global/systems/character-state-and-progression.md": (
+            "天賦", "基礎能力", "技能與熟練度", "當下狀態", "不預設巫師有通用 MP 魔力條",
+        ),
+        "global/systems/item-and-world-interaction.md": (
+            "物件資料欄位", "通用互動動詞", "互動判定", "物件狀態與連鎖互動",
+        ),
     }
     for relative, phrases in contracts.items():
         path = root / relative
