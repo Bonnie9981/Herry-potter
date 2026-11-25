@@ -56,7 +56,7 @@ function makePrompt(s){return [
 '第三步：從入學前生活與霍格華茲錄取通知開始，依年份和世界時間線安排事件。',
 '第四步：正式進入沉浸式劇情，結尾提供最多四個建議行動，並始終允許自由輸入。',
 '請先執行第一步，不要直接跳進劇情。'
-].join('\\n');}
+].join('\n');}
 $('generate').addEventListener('click',()=>{const s=settings();$('prompt').value=makePrompt(s);$('result').hidden=false;$('status').textContent='已生成。請複製指令並貼到新的 AI 對話。';$('result').scrollIntoView({behavior:'smooth',block:'start'});});
 $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('prompt').value);$('status').textContent='已複製到剪貼簿！';}catch(e){$('prompt').select();$('status').textContent='瀏覽器未授權自動複製，請長按選取文字複製。';}});
 $('download').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({format:'hogwarts-sim-player-v1',createdAt:new Date().toISOString(),character:settings()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hogwarts-character.json';a.click();URL.revokeObjectURL(a.href);});
