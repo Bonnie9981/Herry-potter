@@ -123,19 +123,13 @@ jobs:
               raise SystemExit("Unclosed tags: " + ", ".join(parser.stack))
           print("HTML parser check passed.")
 
-  deploy:
-    name: Deploy GitHub Pages
+  build:
+    name: Build Pages artifact
     if: github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -150,6 +144,8 @@ jobs:
           mkdir -p docs/assets/art-direction
           cp assets/art-direction/*.png docs/assets/art-direction/
           test -s docs/game.js
+          test -s docs/js/main.js
+          test -s docs/vendor/three.module.min.js
           test -s docs/assets/art-direction/霍格華茲圖書館奇遇-2.png
 
       - name: Upload site artifact
@@ -157,30 +153,20 @@ jobs:
         with:
           path: docs
 
-      - name: Wait until Pages artifact is visible to the Actions API
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const runId = context.runId;
-            for (let attempt = 1; attempt <= 15; attempt++) {
-              const { data } = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: runId,
-                per_page: 100
-              });
-              const artifact = data.artifacts.find(item =>
-                item.name === "github-pages" && !item.expired
-              );
-              if (artifact) {
-                core.info(`Pages artifact is visible (id=${artifact.id}, size=${artifact.size_in_bytes}).`);
-                return;
-              }
-              core.info(`Pages artifact not visible yet (attempt ${attempt}/15).`);
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            throw new Error("The uploaded github-pages artifact did not become visible in the Actions API within 30 seconds.");
-
+  # 部署獨立成一個 job：上傳與部署分屬不同 job 時，artifact 已在前一個 job 結束時完成登錄，
+  # 可避免同一 job 內 deploy-pages 查不到剛上傳 artifact（Found 0 artifact(s)）的問題。
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
