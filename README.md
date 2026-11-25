@@ -9,18 +9,21 @@
 - [魔法百科](global/magic/README.md)
 - [模擬總目錄](simulations/README.md)
 - [SIMULATION 001｜洛夏](simulations/SIM-001/README.md)
+- [高自由度模擬引擎](global/systems/simulation-engine.md)
+- [紅隊與玩家品鑑報告](docs/高自由度模擬器紅隊與玩家品鑑.md)
 - [完整遊戲主持指令](docs/霍格華茲模擬器完整指令.md)
 
 ## 資料隔離規則
-1. `global/` 只放跨模擬通用的原著資料、已確認世界規則與系統規範。
-2. `simulations/SIM-XXX/` 放該次角色、家庭、天賦、物品、關係、劇情、原創人物、原創魔法、原創制度及世界線變動。
-3. 某次模擬的自創內容預設只屬於該模擬。只有玩家明確要求跨模擬共用，才整理至全域，並標示為原創通用設定，不冒充原著。
+1. global 只放跨模擬通用的原著資料、已確認世界規則與系統規範。
+2. simulations/SIM-XXX/ 放該次角色、家庭、天賦、物品、關係、劇情、原創人物、原創魔法、原創制度及世界線變動。
+3. 某次模擬的自創內容預設只屬於該次模擬。只有玩家明確要求跨模擬共用，才整理至全域，並標示原創通用設定，不冒充原著。
 4. 未確認內容標示待核對，不猜測。
 5. 每次遊戲結束更新 GitHub 對應檔案；寫入成功後才能回報已存檔。
 
 ## 目錄
-- `global/hogwarts/`：學校、學院、教師、課程、考試、校規、地點、魁地奇。
-- `global/world/`：正典層級、歷史、政府、法律與社會。
-- `global/magic/`：咒語、魔藥、魔杖及魔法規則。
-- `global/creatures/`、`plants/`、`objects/`：生物、植物與物品百科。
-- `simulations/`：每次獨立模擬。
+- global/hogwarts/：學校、學院、教師、課程、考試、校規、地點、魁地奇。
+- global/world/：正典層級、歷史、政府、法律與社會。
+- global/magic/：咒語、魔藥、魔杖及魔法規則。
+- global/creatures/、plants/、objects/：生物、植物與物品百科。
+- global/systems/：能力、施法、魔藥與高自由度模擬引擎。
+- simulations/：每次獨立模擬。
