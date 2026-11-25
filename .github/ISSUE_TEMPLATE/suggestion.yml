@@ -1,0 +1,54 @@
+name: 遊戲建議
+description: 提議新玩法、魔法、課程、系統或改善方向
+title: "[建議] "
+labels: ["enhancement", "player-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        歡迎提出新玩法！請說明它如何運作，以及是否只適用於某一條模擬世界線。
+  - type: dropdown
+    id: category
+    attributes:
+      label: 建議類型
+      options:
+        - 新玩法／新系統
+        - 魔法／咒語／魔藥
+        - NPC／人物互動
+        - 學校生活／課程／活動
+        - 世界觀／地點／歷史
+        - 網站功能
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建議內容
+      description: 想新增什麼？希望玩家能做什麼？
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 適用範圍
+      options:
+        - 全域共用規則／資料
+        - 玩家可自行選用
+        - 僅限單次模擬
+        - 尚未確定
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: 預期效果與可能限制
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隱私確認
+      options:
+        - label: 我沒有附上真實個資或私人對話
+          required: true
