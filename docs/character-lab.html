@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>紙片角色實驗室</title>
+<style>
+:root{--gold:#d8b779;--cream:#f4e7cf;--ink:#2a1d16}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#17120f;color:var(--cream);font-family:Georgia,"Noto Serif TC","Songti TC",serif}
+#view{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none}
+.panel{position:fixed;z-index:5;background:linear-gradient(#2b201ae8,#211914ee);border:1px solid #b9945d;border-radius:10px;box-shadow:0 6px 24px #0009;padding:12px 14px}
+#title{top:14px;left:16px;max-width:min(440px,calc(100vw - 32px))}
+#title h1{margin:0 0 4px;font-size:20px;font-weight:500;color:var(--gold)}
+#title p{margin:0;font:13px/1.55 system-ui,sans-serif;color:#eadbc0}
+#ctrl{top:14px;right:16px;width:270px;font:13px/1.5 system-ui,sans-serif}
+#ctrl h2{font:600 13px system-ui,sans-serif;color:var(--gold);margin:0 0 6px;letter-spacing:.05em}
+#ctrl label{display:block;margin:8px 0 2px}
+#ctrl input[type=range]{width:100%;accent-color:#c9a24a}
+#ctrl select{width:100%;padding:5px;background:#33251d;color:var(--cream);border:1px solid #b9945d;border-radius:6px;font:inherit}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid #b9945d;background:#33251d;padding:6px 10px;border-radius:7px}
+button:hover{background:#62472e}button[aria-pressed=true]{background:#7a5a33;border-color:#e4c58c}
+#readout{margin-top:10px;padding:8px;background:#0003;border-radius:6px;font:12px/1.6 ui-monospace,Menlo,monospace;white-space:pre}
+#hint{bottom:14px;left:50%;transform:translateX(-50%);font:13px system-ui,sans-serif;white-space:nowrap}
+.label3d{position:fixed;z-index:4;transform:translate(-50%,0);font:12px system-ui,sans-serif;color:#fff3dc;background:#211914cc;border:1px solid #b9945d88;border-radius:5px;padding:1px 6px;pointer-events:none}
+body.noui .panel{display:none}
+@media (max-width:700px){#ctrl{top:auto;bottom:62px;right:16px;left:16px;width:auto;padding:8px 10px}#ctrl h2,#ctrl label[for=look],#look,#readout{display:none}#ctrl label{margin-top:0}#title p{display:none}#hint{white-space:normal;width:calc(100vw - 32px);text-align:center}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="title" class="panel"><h1>紙片角色實驗室</h1><p>2D 紙片角色放在 3D 場景：繞垂直軸連續旋轉，側面 90° 只剩一條紙緣，180° 自然鏡像；含待機、行走、互動動畫。</p></div>
+<div id="ctrl" class="panel">
+  <h2>玩家角色</h2>
+  <label for="look">外觀</label>
+  <select id="look"></select>
+  <label for="angle">手動角度：<span id="angleVal">自動</span></label>
+  <input id="angle" type="range" min="0" max="360" step="1" value="0">
+  <div class="row">
+    <button id="auto" aria-pressed="true">自動轉向</button>
+    <button id="spin" aria-pressed="false">360° 展示</button>
+    <button id="act">互動動畫</button>
+  </div>
+  <div class="row">
+    <button id="angles" aria-pressed="false">角度對照列</button>
+    <button id="walkInPlace" aria-pressed="false">原地踏步</button>
+  </div>
+  <div id="readout"></div>
+</div>
+<div id="hint" class="panel">WASD／方向鍵移動　點地面行走　E 互動</div>
+<script type="module">
+import * as THREE from "three";
+import { PaperCharacter, LOOKS } from "./js/sprites.js";
+import { stoneFloor, stoneWall, wood, carpet, blob } from "./js/textures.js";
+
+const q = new URLSearchParams(location.search);
+if (q.get("ui") === "0") document.body.classList.add("noui");
+
+const canvas = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1d1510);
+scene.fog = new THREE.Fog(0x1d1510, 26, 48);
+
+// 鏡頭：依 CONTRACT.md，方位角固定 yaw = 0.62 rad，俯角約 45°
+const ZOOM = Number(q.get("zoom")) || 1;
+const CAM_YAW = 0.62, CAM_H = 9 / ZOOM, CAM_UP = 9 / ZOOM;
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+const camTarget = new THREE.Vector3(5, 0.8, 5);
+const RIGHT = new THREE.Vector3(Math.cos(CAM_YAW), 0, -Math.sin(CAM_YAW));
+const AWAY = new THREE.Vector3(-Math.sin(CAM_YAW), 0, -Math.cos(CAM_YAW));
+
+// 簡易房間：石地板、矮牆、地毯、書桌，用來檢查角色的光影與比例
+const W = 10, D = 10;
+const floorTex = stoneFloor("warm").clone(); floorTex.needsUpdate = true; floorTex.repeat.set(W / 4, D / 4);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.85 }));
+floor.rotation.x = -Math.PI / 2; floor.position.set(W / 2, 0, D / 2); floor.receiveShadow = true; scene.add(floor);
+const rug = new THREE.Mesh(new THREE.PlaneGeometry(3, 5), new THREE.MeshStandardMaterial({ map: carpet("navy", 4), roughness: 1 }));
+rug.rotation.x = -Math.PI / 2; rug.rotation.z = Math.PI / 2; rug.position.set(5.6, 0.01, 6.2); rug.receiveShadow = true; scene.add(rug);
+const wallMat = new THREE.MeshStandardMaterial({ map: (() => { const t = stoneWall("warm").clone(); t.needsUpdate = true; t.repeat.set(W / 4, 1.5); return t; })(), roughness: 0.9 });
+for (const [w, x, z, ry] of [[W, W / 2, 0, 0], [D, 0, D / 2, Math.PI / 2]]) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 4, 0.4), wallMat); m.position.set(x, 2, z); m.rotation.y = ry; m.receiveShadow = m.castShadow = true; scene.add(m);
+}
+const woodMat = new THREE.MeshStandardMaterial({ map: wood("dark"), roughness: 0.7 });
+function box(w, h, d, x, z) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), woodMat); m.position.set(x, h / 2, z); m.castShadow = m.receiveShadow = true; scene.add(m); return m; }
+box(2.4, 0.8, 1.1, 2.4, 3.2); box(0.5, 0.95, 0.5, 2.0, 4.3); box(0.5, 0.95, 0.5, 3.0, 4.3);
+box(3.2, 3.2, 0.6, 7.2, 0.55);
+const colliders = [{ x: 2.4, z: 3.2, w: 2.4, d: 1.1 }, { x: 7.2, z: 0.55, w: 3.2, d: 0.6 }];
+
+scene.add(new THREE.HemisphereLight(0xffe2bf, 0x3a2618, 0.9));
+const sun = new THREE.DirectionalLight(0xffc890, 2.6);
+sun.position.set(-4, 9, 3); sun.target.position.set(5, 0, 5);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 });
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+
+// 角色腳下的柔和接觸陰影
+const blobMat = new THREE.MeshBasicMaterial({ map: blob(), transparent: true, depthWrite: false });
+function withBlob(c) { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), blobMat); b.rotation.x = -Math.PI / 2; b.position.y = 0.012; c.group.add(b); return c; }
+
+// 玩家
+let lookKey = q.get("look") && LOOKS[q.get("look")] ? q.get("look") : "player";
+let player = makePlayer(lookKey);
+function makePlayer(key) {
+  const c = withBlob(new PaperCharacter(key)); c.group.position.set(5.2, 0, 5.2); c.addXray(); scene.add(c.group); return c;
+}
+const lookSel = document.getElementById("look");
+for (const k of Object.keys(LOOKS)) lookSel.add(new Option(k, k, false, k === lookKey));
+lookSel.onchange = () => { const p = player.group.position.clone(); scene.remove(player.group); player = makePlayer(lookSel.value); player.group.position.copy(p); };
+
+// 角度對照列：同一角色固定在 0°、45°、90°、135°、180°
+const angleRow = [];
+const labels = [];
+for (const [i, deg] of [0, 45, 90, 135, 180].entries()) {
+  const c = withBlob(new PaperCharacter(lookKey));
+  c.freeze({ angle: deg, frame: 0, bend: 0 });
+  c.group.position.copy(new THREE.Vector3(2.0, 0, 8.4).addScaledVector(RIGHT, i * 1.35));
+  c.group.visible = false; scene.add(c.group); angleRow.push(c);
+  const el = document.createElement("div"); el.className = "label3d"; el.textContent = deg + "°"; el.hidden = true; document.body.append(el); labels.push(el);
+}
+
+// 狀態
+let mode = "auto";           // auto | manual | spin
+let manualAngle = 0, walkInPlace = false, showAngles = q.get("angles") === "1";
+const frozenFrame = q.get("frame") != null ? Number(q.get("frame")) : null;
+if (q.get("yaw") != null) { mode = "manual"; manualAngle = Number(q.get("yaw")); }
+if (q.get("spin") === "1") mode = "spin";
+if (q.get("walk") === "1") walkInPlace = true;
+let target = null;
+const keys = new Set();
+
+const $ = (id) => document.getElementById(id);
+function sync() {
+  $("auto").setAttribute("aria-pressed", mode === "auto");
+  $("spin").setAttribute("aria-pressed", mode === "spin");
+  $("angles").setAttribute("aria-pressed", showAngles);
+  $("walkInPlace").setAttribute("aria-pressed", walkInPlace);
+  $("angleVal").textContent = mode === "manual" ? manualAngle + "°" : mode === "spin" ? "旋轉中" : "自動";
+  angleRow.forEach((c, i) => { c.group.visible = showAngles; labels[i].hidden = !showAngles; });
+}
+$("angle").oninput = (e) => { mode = "manual"; manualAngle = Number(e.target.value); sync(); };
+$("auto").onclick = () => { mode = "auto"; player.freeze(null); sync(); };
+$("spin").onclick = () => { mode = mode === "spin" ? "auto" : "spin"; sync(); };
+$("act").onclick = () => player.interact();
+$("angles").onclick = () => { showAngles = !showAngles; sync(); };
+$("walkInPlace").onclick = () => { walkInPlace = !walkInPlace; sync(); };
+sync();
+
+addEventListener("keydown", (e) => {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (k === "e") { player.interact(); return; }
+  if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d"].includes(k.toLowerCase())) { keys.add(k.toLowerCase()); target = null; e.preventDefault(); }
+});
+addEventListener("keyup", (e) => keys.delete((e.key.length === 1 ? e.key.toLowerCase() : e.key).toLowerCase()));
+addEventListener("blur", () => keys.clear());
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+canvas.addEventListener("pointerdown", (e) => {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObject(floor)[0];
+  if (hit) target = hit.point.clone();
+});
+
+function blocked(x, z) {
+  if (x < 0.5 || z < 0.6 || x > W - 0.3 || z > D - 0.3) return true;
+  return colliders.some((c) => Math.abs(x - c.x) < c.w / 2 + 0.25 && Math.abs(z - c.z) < c.d / 2 + 0.2);
+}
+
+const SPEED = 2.2;
+const v = new THREE.Vector3();
+function movePlayer(dt) {
+  v.set(0, 0, 0);
+  const has = (...k) => k.some((x) => keys.has(x));
+  if (has("w", "arrowup")) v.add(AWAY);
+  if (has("s", "arrowdown")) v.sub(AWAY);
+  if (has("d", "arrowright")) v.add(RIGHT);
+  if (has("a", "arrowleft")) v.sub(RIGHT);
+  if (target && v.lengthSq() === 0) {
+    v.set(target.x - player.group.position.x, 0, target.z - player.group.position.z);
+    if (v.length() < 0.06) { target = null; v.set(0, 0, 0); }
+  }
+  if (v.lengthSq() > 0) {
+    v.normalize();
+    const p = player.group.position;
+    const nx = p.x + v.x * SPEED * dt, nz = p.z + v.z * SPEED * dt;
+    let moved = false;
+    if (!blocked(nx, p.z)) { p.x = nx; moved = true; }
+    if (!blocked(p.x, nz)) { p.z = nz; moved = true; }
+    if (!moved) target = null;
+    player.face(v.dot(RIGHT), v.dot(AWAY));
+    player.walking = moved;
+  } else player.walking = walkInPlace;
+}
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+
+const clock = new THREE.Clock();
+const tmp = new THREE.Vector3();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  movePlayer(dt);
+  if (mode === "manual") player.freeze({ angle: manualAngle, frame: frozenFrame });
+  else if (mode === "spin") player.freeze({ angle: (performance.now() / 1000 * 90) % 360, frame: frozenFrame });
+  else player.freeze(frozenFrame != null ? { frame: frozenFrame } : null);
+  player.update(dt, CAM_YAW);
+  for (const c of angleRow) c.update(dt, CAM_YAW);
+  // 鏡頭跟隨玩家
+  camTarget.lerp(tmp.set(player.group.position.x, 0.8, player.group.position.z), 1 - Math.exp(-dt * 4));
+  camera.position.set(camTarget.x + Math.sin(CAM_YAW) * CAM_H, camTarget.y + CAM_UP, camTarget.z + Math.cos(CAM_YAW) * CAM_H);
+  camera.lookAt(camTarget);
+  renderer.render(scene, camera);
+  if (showAngles) angleRow.forEach((c, i) => {
+    tmp.copy(c.group.position).project(camera);
+    labels[i].style.left = ((tmp.x + 1) / 2) * innerWidth + "px"; labels[i].style.top = ((1 - tmp.y) / 2) * innerHeight + 8 + "px";
+  });
+  $("readout").textContent =
+    `狀態　${player.state}\n角度　${(((player.paperAngle % 360) + 360) % 360).toFixed(0)}°\n畫格　${player.frame}\n步相　${player.stepPhase.toFixed(2)}`;
+  requestAnimationFrame(frame);
+}
+// 首次進場就把鏡頭放在玩家身上
+camTarget.set(player.group.position.x, 0.8, player.group.position.z);
+window.__lab = { get player() { return player; }, angleRow, THREE, camera, scene };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

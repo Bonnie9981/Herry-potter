@@ -1,10 +1,18 @@
-// 紙片角色繪製：Q 版但修長的比例、手繪漸層、白色貼紙描邊。
-// 每個角色產生一張 8 格圖集：0–1 待機呼吸、2–7 行走循環。
+// 紙片角色：Q 版但修長的比例、手繪漸層、白色貼紙描邊，放進 3D 場景的一張雙面紙。
+//
+// 圖集（6 欄 × 3 列，每格 256×512）：
+//   0–3   待機：呼吸 3 格 + 眨眼 1 格
+//   4–11  行走：8 格完整步態（膝蓋彎曲、抬腳、身體起伏、手臂反向擺動）
+//   12–17 互動：舉起魔杖、杖尖發光
+// 紙片繞垂直軸連續旋轉：0° 正面（朝畫面右），90° 只剩一條白色紙緣，180° 由 GPU 自然鏡像。
 import * as THREE from "three";
 import { rng } from "./textures.js";
 
-export const FRAME_W = 256, FRAME_H = 512, FRAMES = 8;
+export const FRAME_W = 256, FRAME_H = 512;
+export const COLS = 6, ROWS = 3, FRAMES = COLS * ROWS;
+export const IDLE_FRAMES = [0, 1, 2, 3], WALK_FRAMES = [4, 5, 6, 7, 8, 9, 10, 11], INTERACT_FRAMES = [12, 13, 14, 15, 16, 17];
 const INK = "rgba(52,32,24,0.9)";
+const GROUND = 488, ANKLE = 474;
 
 function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
@@ -61,26 +69,6 @@ function drawHairBack(x, L, cx, top) {
   }
 }
 
-function drawLegs(x, L, cx, hip, phase, walking) {
-  const sw = walking ? Math.sin(phase) : 0;
-  const legs = [{ dx: -14, s: sw }, { dx: 14, s: -sw }];
-  // 後腳先畫
-  legs.sort((a, b) => a.s - b.s);
-  for (const leg of legs) {
-    const fx = cx + leg.dx + leg.s * 20, lift = walking ? Math.max(0, -leg.s) * 10 : 0;
-    const foot = 488 - lift;
-    x.beginPath();
-    x.moveTo(cx + leg.dx - 9, hip); x.lineTo(cx + leg.dx + 9, hip);
-    x.lineTo(fx + 8, foot - 22); x.lineTo(fx - 8, foot - 22); x.closePath();
-    const stock = L.lower === "trousers" ? "#2a2b30" : "#26242a";
-    fillStroke(x, sideGrad(x, fx - 10, fx + 10, stock), 2.2);
-    // 鞋
-    x.beginPath(); x.moveTo(fx - 10, foot - 24); x.quadraticCurveTo(fx - 12, foot, fx + 2, foot); x.lineTo(fx + 20, foot); x.quadraticCurveTo(fx + 22, foot - 12, fx + 9, foot - 24); x.closePath();
-    fillStroke(x, sideGrad(x, fx - 12, fx + 22, "#4a2c1d"), 2.2);
-    x.fillStyle = "rgba(255,230,200,.35)"; x.fillRect(fx - 4, foot - 18, 10, 3);
-  }
-}
-
 function drawBody(x, L, cx, sh, phase, walking, breathe) {
   const sway = walking ? Math.sin(phase) * 5 : 0;
   const hem = L.lower === "longrobe" ? 470 : 392;
@@ -133,21 +121,6 @@ function drawBody(x, L, cx, sh, phase, walking, breathe) {
   for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4 - Math.PI / 2, rr = i % 2 ? 3 : 8; x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill(); x.restore();
 }
 
-function drawArm(x, L, cx, sh, side, swing, holdBook) {
-  const ax = cx + side * 44, ay = sh + 14;
-    x.save(); x.translate(ax, ay); x.rotate(swing * 0.2 + side * 0.06);
-  x.beginPath(); x.moveTo(-13, 0); x.quadraticCurveTo(-18, 60, -16, 108); x.lineTo(18, 112); x.quadraticCurveTo(18, 60, 13, 0); x.closePath();
-  fillStroke(x, sideGrad(x, -18, 18, L.robe), 2.4);
-  x.fillStyle = L.house[0]; x.fillRect(-16, 100, 34, 6);
-  x.beginPath(); x.ellipse(1, 120, 10, 11, 0, 0, Math.PI * 2); fillStroke(x, L.skin, 2);
-  x.restore();
-  if (holdBook && side > 0) {
-    x.save(); x.translate(cx + 22, sh + 96); x.rotate(-0.15);
-    x.beginPath(); x.rect(-26, -32, 52, 62); fillStroke(x, sideGrad(x, -26, 26, "#6b2b24"), 2);
-    x.fillStyle = "#d9b46a"; x.fillRect(-18, -20, 36, 3); x.fillRect(-18, 16, 36, 3); x.restore();
-  }
-}
-
 function drawHead(x, L, cx, top, blink) {
   const hy = top + 92;
   // 脖子
@@ -168,21 +141,32 @@ function drawHead(x, L, cx, top, blink) {
   x.beginPath(); x.ellipse(cx - 28, hy + 26, 13, 7, 0, 0, 7); x.fill();
   x.beginPath(); x.ellipse(cx + 38, hy + 24, 11, 6, 0, 0, 7); x.fill();
   // 眼睛（3/4 朝右）
-  const eyes = [[cx - 16, 15], [cx + 30, 13]];
-  for (const [ex, ew] of eyes) {
-    const ey = hy + 6;
-    if (blink) { x.strokeStyle = INK; x.lineWidth = 3; x.beginPath(); x.moveTo(ex - ew, ey + 4); x.quadraticCurveTo(ex, ey + 10, ex + ew, ey + 4); x.stroke(); continue; }
-    x.fillStyle = "#fffaf2"; x.beginPath(); x.ellipse(ex, ey, ew, 17, 0, 0, 7); x.fill();
-    const ig = x.createLinearGradient(0, ey - 16, 0, ey + 16); ig.addColorStop(0, shade(L.eyes, -0.45)); ig.addColorStop(1, shade(L.eyes, 0.35));
-    x.fillStyle = ig; x.beginPath(); x.ellipse(ex + 2, ey + 2, ew * 0.78, 15, 0, 0, 7); x.fill();
-    x.fillStyle = "#170d09"; x.beginPath(); x.ellipse(ex + 2, ey + 3, ew * 0.38, 8, 0, 0, 7); x.fill();
-    x.fillStyle = "#fff"; x.beginPath(); x.arc(ex - 3, ey - 6, 4.2, 0, 7); x.fill(); x.beginPath(); x.arc(ex + 6, ey + 8, 2, 0, 7); x.fill();
-    x.strokeStyle = "#24140e"; x.lineWidth = 3.4; x.beginPath(); x.moveTo(ex - ew - 1, ey - 5); x.quadraticCurveTo(ex - 2, ey - 25, ex + ew + 5, ey - 9); x.stroke();
+  // 瀏海在額頭投下的柔和陰影
+  const bs = x.createLinearGradient(0, hy - 34, 0, hy - 6);
+  bs.addColorStop(0, "rgba(120,60,40,.32)"); bs.addColorStop(1, "rgba(120,60,40,0)");
+  x.save(); x.beginPath(); x.ellipse(cx + 2, hy - 2, 56, 66, 0, 0, 7); x.clip(); x.fillStyle = bs; x.fillRect(cx - 60, hy - 40, 120, 36); x.restore();
+  // 眼睛（3/4 朝右）：大而柔和，上睫毛順著眼形，不上挑
+  const eyes = [[cx - 16, 15, 19], [cx + 30, 13, 18]];
+  for (const [ex, ew, eh] of eyes) {
+    const ey = hy + 8;
+    if (blink) { x.strokeStyle = INK; x.lineWidth = 3; x.beginPath(); x.moveTo(ex - ew, ey + 2); x.quadraticCurveTo(ex, ey + 9, ex + ew, ey + 2); x.stroke(); continue; }
+    x.fillStyle = "#fffaf2"; x.beginPath(); x.ellipse(ex, ey, ew, eh, 0, 0, 7); x.fill();
+    x.save(); x.beginPath(); x.ellipse(ex, ey, ew, eh, 0, 0, 7); x.clip();
+    const ig = x.createLinearGradient(0, ey - eh, 0, ey + eh); ig.addColorStop(0, shade(L.eyes, -0.5)); ig.addColorStop(0.55, L.eyes); ig.addColorStop(1, shade(L.eyes, 0.45));
+    x.fillStyle = ig; x.beginPath(); x.ellipse(ex + 2, ey + 2, ew * 0.82, eh - 1, 0, 0, 7); x.fill();
+    x.strokeStyle = shade(L.eyes, -0.55); x.lineWidth = 1.6; x.stroke();
+    x.fillStyle = "#170d09"; x.beginPath(); x.ellipse(ex + 2, ey + 2, ew * 0.4, eh * 0.45, 0, 0, 7); x.fill();
+    x.fillStyle = "rgba(40,20,10,.25)"; x.fillRect(ex - ew, ey - eh, ew * 2, 6); // 上眼瞼陰影
+    x.restore();
+    x.fillStyle = "#fff"; x.beginPath(); x.ellipse(ex - 3, ey - 6, 5, 6, -0.3, 0, 7); x.fill(); x.beginPath(); x.arc(ex + 6, ey + 9, 2.4, 0, 7); x.fill();
+    x.strokeStyle = "#24140e"; x.lineWidth = 3.6; x.lineCap = "round";
+    x.beginPath(); x.moveTo(ex - ew - 2, ey - 3); x.quadraticCurveTo(ex, ey - eh - 7, ex + ew + 3, ey - 5); x.stroke();
+    x.lineWidth = 1.4; x.beginPath(); x.moveTo(ex - ew * 0.5, ey + eh - 1); x.quadraticCurveTo(ex, ey + eh + 2, ex + ew * 0.6, ey + eh - 2); x.stroke();
   }
   // 眉
   x.strokeStyle = shade(L.hair, -0.1); x.lineWidth = 2;
-  x.beginPath(); x.moveTo(cx - 28, hy - 30); x.quadraticCurveTo(cx - 16, hy - 37, cx - 5, hy - 33); x.stroke();
-  x.beginPath(); x.moveTo(cx + 21, hy - 33); x.quadraticCurveTo(cx + 32, hy - 38, cx + 42, hy - 31); x.stroke();
+  x.beginPath(); x.moveTo(cx - 29, hy - 22); x.quadraticCurveTo(cx - 17, hy - 29, cx - 5, hy - 24); x.stroke();
+  x.beginPath(); x.moveTo(cx + 21, hy - 24); x.quadraticCurveTo(cx + 32, hy - 30, cx + 43, hy - 23); x.stroke();
   // 鼻、嘴
   x.strokeStyle = "rgba(150,80,60,.6)"; x.lineWidth = 2; x.beginPath(); x.moveTo(cx + 10, hy + 22); x.lineTo(cx + 13, hy + 28); x.stroke();
   x.strokeStyle = "#8a4a3e"; x.lineWidth = 2.4; x.beginPath(); x.moveTo(cx + 2, hy + 40); x.quadraticCurveTo(cx + 10, hy + 45, cx + 18, hy + 39); x.stroke();
@@ -202,7 +186,7 @@ function drawHairFront(x, L, cx, top, hy) {
     x.quadraticCurveTo(cx - 74, hy - 82, cx + 2, hy - 88);
     x.quadraticCurveTo(cx + 78, hy - 86, cx + 66, hy + 16);
     // 瀏海（鋸齒）
-    const pts = [[cx + 54, hy - 8], [cx + 40, hy - 30], [cx + 28, hy - 2], [cx + 12, hy - 34], [cx - 4, hy - 6], [cx - 18, hy - 36], [cx - 34, hy - 4], [cx - 44, hy - 30], [cx - 58, hy + 8]];
+    const pts = [[cx + 56, hy - 6], [cx + 46, hy - 36], [cx + 30, hy - 20], [cx + 16, hy - 44], [cx, hy - 22], [cx - 14, hy - 46], [cx - 30, hy - 20], [cx - 42, hy - 40], [cx - 58, hy + 6]];
     for (let i = 0; i < pts.length; i++) x.lineTo(pts[i][0], pts[i][1]);
     x.closePath();
   }
@@ -213,13 +197,19 @@ function drawHairFront(x, L, cx, top, hy) {
       x.beginPath(); const sx = cx + side * 58;
       x.moveTo(sx, hy - 30);
       const len = L.hairStyle === "bob" ? 70 : 150;
-      if (L.hairStyle === "curly") { for (let k = 0; k < 5; k++) x.quadraticCurveTo(sx + side * (k % 2 ? 18 : -2), hy - 20 + k * 30 + 15, sx + side * 4, hy - 20 + (k + 1) * 30); }
+      if (L.hairStyle === "longwave") { for (let k = 0; k < 4; k++) x.quadraticCurveTo(sx + side * (k % 2 ? 14 : 2), hy - 30 + k * 40 + 20, sx + side * (6 + k * 2), hy - 30 + (k + 1) * 40); }
+      else if (L.hairStyle === "curly") { for (let k = 0; k < 5; k++) x.quadraticCurveTo(sx + side * (k % 2 ? 18 : -2), hy - 20 + k * 30 + 15, sx + side * 4, hy - 20 + (k + 1) * 30); }
       else x.quadraticCurveTo(sx + side * 16, hy + len * 0.5, sx + side * 2, hy + len);
       x.lineTo(sx - side * 12, hy + len - 20); x.quadraticCurveTo(sx - side * 4, hy + 10, sx - side * 6, hy - 30); x.closePath();
       fillStroke(x, g, 2.4);
     }
   }
-  // 髮絲高光
+  // 髮絲：深色分線 + 暖色高光
+  if (L.hairStyle !== "crop") {
+    x.save(); x.strokeStyle = shade(h, -0.4); x.lineWidth = 1.6; x.lineCap = "round";
+    for (const [sx, ex2] of [[-30, -46], [-8, -14], [14, 20], [34, 44]]) { x.beginPath(); x.moveTo(cx + sx * 0.4, hy - 80); x.quadraticCurveTo(cx + sx, hy - 66, cx + ex2, hy - 30); x.stroke(); }
+    x.restore();
+  }
   x.strokeStyle = "rgba(255,235,200,.35)"; x.lineWidth = 3;
   x.beginPath(); x.arc(cx - 6, hy - 40, 42, Math.PI * 1.15, Math.PI * 1.55); x.stroke();
 }
@@ -232,27 +222,6 @@ function drawHat(x, L, cx, hy) {
   x.quadraticCurveTo(cx + 40, hy - 90, cx + 50, hy - 64); x.closePath();
   fillStroke(x, sideGrad(x, cx - 46, cx + 52, L.robe), 2.4);
   x.fillStyle = L.house[1]; x.fillRect(cx - 44, hy - 80, 94, 9);
-}
-
-function drawFrame(x, L, frame) {
-  const cx = FRAME_W / 2;
-  const walking = frame >= 2, phase = walking ? ((frame - 2) / 6) * Math.PI * 2 : 0;
-  const bob = walking ? Math.abs(Math.sin(phase)) * -5 : 0;
-  const breathe = frame === 1 ? 1.5 : 0;
-  const top = 40 + bob + breathe * 0.5 + (L.adult ? -6 : 8);
-  const sh = top + 168;
-  const hip = L.lower === "longrobe" ? 440 : 368;
-  x.save();
-  drawHairBack(x, L, cx, top);
-  drawLegs(x, L, cx, hip, phase, walking);
-  const swing = walking ? Math.sin(phase) : 0;
-  drawArm(x, L, cx, sh, -1, swing, false);
-  drawBody(x, L, cx, sh, phase, walking, breathe);
-  drawArm(x, L, cx, sh, 1, -swing, L.book);
-  const hy = drawHead(x, L, cx, top, false);
-  drawHairFront(x, L, cx, top, hy);
-  if (L.hat) drawHat(x, L, cx, hy);
-  x.restore();
 }
 
 function stickerize(src, r) {
@@ -282,29 +251,168 @@ function paintTexture(c, seed) {
   x.restore();
 }
 
+// ---- 步態：雙腿以髖關節為軸擺動，擺動腿膝蓋彎曲抬腳，支撐腳貼地，身體高度由腿長決定 ----
+function legPose(L, cx, hipBase, phase, walking) {
+  const legLen = ANKLE - hipBase, thigh = legLen * 0.5, shin = legLen * 0.5;
+  const amp = L.lower === "longrobe" ? 0.55 : 0.4;
+  const legs = [{ dx: -10, off: Math.PI, far: true }, { dx: 10, off: 0, far: false }].map((leg) => {
+    const p = phase + leg.off;
+    const a = walking ? Math.sin(p) * amp : 0;                       // 髖角，正值＝往前（畫面右）
+    const b = walking ? Math.pow(Math.max(0, Math.cos(p)), 1.4) * 0.95 : 0; // 擺動期膝蓋彎曲
+    return { ...leg, a, b };
+  });
+  let lowest = -Infinity;
+  for (const leg of legs) {
+    const kx = Math.sin(leg.a) * thigh, ky = Math.cos(leg.a) * thigh;
+    leg.knee = [kx, ky];
+    leg.ankle = [kx + Math.sin(leg.a - leg.b) * shin, ky + Math.cos(leg.a - leg.b) * shin];
+    lowest = Math.max(lowest, leg.ankle[1]);
+  }
+  const bob = legLen - lowest; // 雙腿張開時身體下沉
+  const hip = hipBase + bob;
+  for (const leg of legs) {
+    const hx = cx + leg.dx;
+    leg.hipPt = [hx, hip];
+    leg.knee = [hx + leg.knee[0], hip + leg.knee[1]];
+    leg.ankle = [hx + leg.ankle[0], hip + leg.ankle[1]];
+    leg.toe = -leg.b * 0.45 + (leg.a < 0 && !leg.b ? 0 : 0);
+  }
+  return { legs, bob };
+}
+
+function drawLeg(x, L, leg) {
+  const stock = L.lower === "trousers" ? "#2a2b30" : "#26242a";
+  const col = leg.far ? shade(stock, -0.25) : stock;
+  x.lineCap = "round"; x.lineJoin = "round";
+  x.beginPath(); x.moveTo(...leg.hipPt); x.lineTo(...leg.knee); x.lineTo(...leg.ankle);
+  x.strokeStyle = INK; x.lineWidth = L.lower === "trousers" ? 23 : 19; x.stroke();
+  x.strokeStyle = col; x.lineWidth = L.lower === "trousers" ? 19 : 15; x.stroke();
+  // 腿部受光
+  x.beginPath(); x.moveTo(leg.knee[0] - 4, leg.knee[1] - 10); x.lineTo(leg.ankle[0] - 4, leg.ankle[1] - 8);
+  x.strokeStyle = "rgba(255,225,190,.16)"; x.lineWidth = 3; x.stroke();
+  // 鞋：跟著抬腳角度轉動
+  x.save(); x.translate(...leg.ankle); x.rotate(leg.toe);
+  x.beginPath(); x.moveTo(-9, -8); x.quadraticCurveTo(-12, 14, 0, 14); x.lineTo(20, 14); x.quadraticCurveTo(24, 2, 8, -8); x.closePath();
+  fillStroke(x, sideGrad(x, -12, 24, leg.far ? "#3a2216" : "#4a2c1d"), 2.2);
+  x.fillStyle = "rgba(255,230,200,.35)"; x.fillRect(-2, -2, 11, 3);
+  x.fillStyle = "rgba(20,10,5,.5)"; x.fillRect(-11, 11, 33, 3);
+  x.restore();
+}
+
+function drawArm(x, L, cx, sh, side, rot, opts = {}) {
+  const ax = cx + side * 44, ay = sh + 14;
+  x.save(); x.translate(ax, ay); x.rotate(rot + side * 0.06); if (opts.shorten) x.scale(1, 1 - opts.shorten);
+  const robe = side < 0 ? shade(L.robe, -0.18) : L.robe;
+  x.beginPath(); x.moveTo(-13, 0); x.quadraticCurveTo(-19, 60, -18, 108); x.lineTo(19, 113); x.quadraticCurveTo(18, 60, 13, 0); x.closePath();
+  fillStroke(x, sideGrad(x, -18, 18, robe), 2.4);
+  // 袖子皺褶
+  x.strokeStyle = "rgba(0,0,0,.28)"; x.lineWidth = 1.6;
+  x.beginPath(); x.moveTo(-6, 34); x.quadraticCurveTo(0, 60, -4, 92); x.stroke();
+  x.fillStyle = L.house[0]; x.fillRect(-17, 100, 36, 6);
+  x.beginPath(); x.ellipse(1, 120, 10, 11, 0, 0, Math.PI * 2); fillStroke(x, side < 0 ? shade(L.skin, -0.12) : L.skin, 2);
+  x.restore();
+  if (opts.holdBook) {
+    x.save(); x.translate(cx + 22, sh + 96); x.rotate(-0.15);
+    x.beginPath(); x.rect(-26, -32, 52, 62); fillStroke(x, sideGrad(x, -26, 26, "#6b2b24"), 2);
+    x.fillStyle = "#d9b46a"; x.fillRect(-18, -20, 36, 3); x.fillRect(-18, 16, 36, 3); x.restore();
+  }
+}
+
+const ease = (t) => t * t * (3 - 2 * t);
+
+function drawFrame(x, L, f) {
+  const cx = FRAME_W / 2;
+  let walking = false, phase = 0, breathe = 0, blink = false, raise = 0, spark = 0;
+  if (f < 4) { breathe = [0, 1.5, 3, 1.5][f]; blink = f === 3; }
+  else if (f < 12) { walking = true; phase = ((f - 4) / 8) * Math.PI * 2; }
+  else { const k = f - 12; raise = ease(Math.min(1, k / 2.5)); spark = k >= 2 ? 0.45 + 0.55 * Math.abs(Math.sin(k * 1.3)) : 0; breathe = 1; }
+  const hipBase = L.lower === "longrobe" ? 440 : 368;
+  const { legs, bob } = legPose(L, cx, hipBase, phase, walking);
+  const lift = -breathe * 0.6;
+  const top = 40 + bob + lift + (L.adult ? -6 : 8);
+  const sh = top + 168;
+  const near = legs.find((l) => !l.far), far = legs.find((l) => l.far);
+  x.save();
+  drawLeg(x, L, far);
+  drawLeg(x, L, near);
+  // 走路時上身微微前傾（以髖為軸）
+  if (walking) { x.translate(cx, hipBase + bob); x.rotate(0.035); x.translate(-cx, -(hipBase + bob)); }
+  if (raise) { x.translate(cx, hipBase); x.rotate(0.03 * raise); x.translate(-cx, -hipBase); }
+  drawHairBack(x, L, cx, top);
+  drawArm(x, L, cx, sh, -1, far.a * 0.8, {});
+  drawBody(x, L, cx, sh, phase, walking, breathe);
+  const frontRot = near.a * 0.8 * (1 - raise) - 2.6 * raise;
+  drawArm(x, L, cx, sh, 1, frontRot, { holdBook: L.book && !raise, wand: raise > 0, spark, shorten: 0.3 * raise });
+  const hy = drawHead(x, L, cx, top, blink);
+  drawHairFront(x, L, cx, top, hy);
+  if (L.hat) drawHat(x, L, cx, hy);
+  if (raise > 0) drawWand(x, L, cx, sh, frontRot, 0.3 * raise, spark);
+  x.restore();
+}
+
+// 魔杖畫在頭髮之上：從手掌往前上方伸出，杖尖發光
+function drawWand(x, L, cx, sh, rot, shorten, spark) {
+  const r = rot + 0.06, ly = 120 * (1 - shorten);
+  const hx = cx + 44 - Math.sin(r) * ly, hy = sh + 14 + Math.cos(r) * ly;
+  const dx = 0.2, dy = -0.98, len = 55;
+  const tx = hx + dx * len, ty = hy + dy * len;
+  x.save();
+  x.lineCap = "round";
+  x.strokeStyle = INK; x.lineWidth = 7; x.beginPath(); x.moveTo(hx - dx * 6, hy - dy * 6); x.lineTo(tx, ty); x.stroke();
+  x.strokeStyle = "#5a3826"; x.lineWidth = 4; x.stroke();
+  x.strokeStyle = "#c79a5a"; x.lineWidth = 5; x.beginPath(); x.moveTo(hx - dx * 6, hy - dy * 6); x.lineTo(hx + dx * 4, hy + dy * 4); x.stroke();
+  if (spark > 0) {
+    const R = 26 * spark, g = x.createRadialGradient(tx, ty, 0, tx, ty, R);
+    g.addColorStop(0, "rgba(255,250,220,.95)"); g.addColorStop(0.35, "rgba(255,214,130,.6)"); g.addColorStop(1, "rgba(255,190,90,0)");
+    x.fillStyle = g; x.beginPath(); x.arc(tx, ty, R, 0, 7); x.fill();
+    x.fillStyle = "#fffbea"; x.beginPath();
+    for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4 + spark, rr = i % 2 ? 3.5 * spark : 13 * spark; x.lineTo(tx + Math.cos(a) * rr, ty + Math.sin(a) * rr); }
+    x.closePath(); x.fill();
+  }
+  // 握杖的手蓋在杖上
+  x.beginPath(); x.ellipse(hx, hy, 10, 11, 0, 0, Math.PI * 2); fillStroke(x, L.skin, 2);
+  x.restore();
+}
+
 const atlasCache = new Map();
-export function characterAtlas(key) {
-  if (atlasCache.has(key)) return atlasCache.get(key);
+function buildAtlas(key) {
   const L = LOOKS[key] || LOOKS.reader;
-  const atlas = document.createElement("canvas"); atlas.width = FRAME_W * FRAMES; atlas.height = FRAME_H;
+  const atlas = document.createElement("canvas"); atlas.width = FRAME_W * COLS; atlas.height = FRAME_H * ROWS;
   const ax = atlas.getContext("2d");
+  // 紙緣圖集：每格 8px 寬，只要該列有角色像素就畫成白色紙緣
+  const EW = 8;
+  const edge = document.createElement("canvas"); edge.width = EW * COLS; edge.height = FRAME_H * ROWS;
+  const ex = edge.getContext("2d");
   for (let f = 0; f < FRAMES; f++) {
     const fc = document.createElement("canvas"); fc.width = FRAME_W; fc.height = FRAME_H;
     const fx = fc.getContext("2d");
     fx.translate(FRAME_W * 0.06, FRAME_H * 0.05); fx.scale(0.88, 0.9);
     drawFrame(fx, L, f);
     paintTexture(fc, 100 + f);
-    ax.drawImage(stickerize(fc, 7), f * FRAME_W, 0);
+    const st = stickerize(fc, 7);
+    const col = f % COLS, row = Math.floor(f / COLS);
+    ax.drawImage(st, col * FRAME_W, row * FRAME_H);
+    const data = st.getContext("2d").getImageData(0, 0, FRAME_W, FRAME_H).data;
+    for (let y = 0; y < FRAME_H; y++) {
+      let on = false;
+      for (let xx = 0; xx < FRAME_W; xx += 2) if (data[(y * FRAME_W + xx) * 4 + 3] > 128) { on = true; break; }
+      if (!on) continue;
+      ex.fillStyle = "#fbf5ea"; ex.fillRect(col * EW, row * FRAME_H + y, EW, 1);
+      ex.fillStyle = "#d9c6a6"; ex.fillRect(col * EW + 3, row * FRAME_H + y, 2, 1);
+    }
   }
-  const tex = new THREE.CanvasTexture(atlas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  tex.generateMipmaps = true;
-  atlasCache.set(key, tex);
-  return tex;
+  const mk = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  const out = { tex: mk(atlas), edge: mk(edge) };
+  out.edge.generateMipmaps = false; out.edge.minFilter = THREE.LinearFilter;
+  atlasCache.set(key, out);
+  return out;
 }
 
-// 頭像（對話框用）
+export function characterAtlas(key) {
+  return (atlasCache.get(key) || buildAtlas(key)).tex;
+}
+
+// 頭像（對話框用）：取待機第 0 格的上半部
 export function portraitDataURL(key) {
   const tex = characterAtlas(key);
   const c = document.createElement("canvas"); c.width = 160; c.height = 160;
@@ -312,29 +420,71 @@ export function portraitDataURL(key) {
   return c.toDataURL();
 }
 
+function frameUV(tex, f) {
+  tex.offset.set((f % COLS) / COLS, 1 - (Math.floor(f / COLS) + 1) / ROWS);
+}
+
+const wrap180 = (d) => { while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
+
 // 紙片角色：一張雙面平面。背面由 GPU 自然呈現鏡像，不另畫背面。
+// 公開介面：.group、.walking、.face(screenDX, screenDY)、.update(dt, camYaw)、.addXray()
+//          .setState("idle"|"walk"|"interact")、.interact() → Promise、.state、.paperAngle（度）
 export class PaperCharacter {
-  constructor(key, { height = 1.85 } = {}) {
+  constructor(key, { height = 1.85, thickness = 0.022 } = {}) {
     this.key = key;
-    const base = characterAtlas(key);
-    this.tex = base.clone();
-    this.tex.needsUpdate = true;
-    this.tex.repeat.set(1 / FRAMES, 1);
+    this.height = height;
+    atlasCache.get(key) || buildAtlas(key);
+    const base = atlasCache.get(key);
+    this.tex = base.tex.clone(); this.tex.needsUpdate = true; this.tex.repeat.set(1 / COLS, 1 / ROWS);
+    this.edgeTex = base.edge.clone(); this.edgeTex.needsUpdate = true; this.edgeTex.repeat.set(1 / COLS, 1 / ROWS);
     const w = height * (FRAME_W / FRAME_H);
-    const geo = new THREE.PlaneGeometry(w, height);
-    geo.translate(0, height / 2 - height * 0.035, 0);
-    this.mat = new THREE.MeshStandardMaterial({ map: this.tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+    this.w = w;
+    const yOff = height / 2 - height * 0.035;
+    // 細分平面：行走與轉身時讓紙張微微彎曲
+    const geo = new THREE.PlaneGeometry(w, height, 8, 12);
+    geo.translate(0, yOff, 0);
+    this.geo = geo;
+    this.base = Float32Array.from(geo.attributes.position.array);
+    // 紙片永遠大致朝向鏡頭，若只靠場景光，背光時會整張變黑；用自發光保底，保留彩度與白色描邊
+    this.mat = new THREE.MeshStandardMaterial({ map: this.tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0xffffff, emissiveMap: this.tex, emissiveIntensity: 0.5 });
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.castShadow = true;
     this.mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: this.tex, alphaTest: 0.5 });
+    // 紙緣：與紙面垂直的細條，側向 90° 時看得到一條白色厚度邊
+    const egeo = new THREE.PlaneGeometry(thickness, height);
+    egeo.translate(0, yOff, 0);
+    this.edgeMat = new THREE.MeshStandardMaterial({ map: this.edgeTex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.95, metalness: 0, emissive: 0xffffff, emissiveMap: this.edgeTex, emissiveIntensity: 0.5 });
+    this.edge = new THREE.Mesh(egeo, this.edgeMat);
+    this.edge.rotation.y = Math.PI / 2;
     this.group = new THREE.Group();
     this.pivot = new THREE.Group();
-    this.pivot.add(this.mesh);
+    this.pivot.add(this.mesh, this.edge);
     this.group.add(this.pivot);
-    this.frame = 0; this.t = Math.random() * 3; this.walking = false;
+    this.frame = -1; this.t = Math.random() * 3; this.walking = false;
+    this.stepPhase = 0;       // 步態相位（圈數），依實際移動距離推進，避免滑步
+    this.stride = 1.15 * (height / 1.85); // 一個完整步態（兩步）前進的距離
     this.paperAngle = 0;      // 紙片相對鏡頭的角度（度）
     this.targetAngle = 0;
+    this.turnSpeed = 720;     // 度／秒；180° 轉身約 0.25 秒，會經過 90° 細線
     this.facingRight = true;
+    this._omega = 0; this._bend = 0;
+    this._interact = null;
+    this._blinkIn = 2 + Math.random() * 3; this._blinkT = 0;
+    this._last = null;
+    this._frozen = null;
+    this.setFrame(0);
+  }
+  get state() { return this._interact ? "interact" : this.walking ? "walk" : "idle"; }
+  setState(s) {
+    if (s === "interact") return this.interact();
+    this.walking = s === "walk";
+  }
+  // 播放一次互動動畫（舉杖、杖尖發光），結束後回到待機／行走
+  interact(duration = 0.9) {
+    if (this._interact) return this._interact.promise;
+    let resolve; const promise = new Promise((r) => (resolve = r));
+    this._interact = { t: 0, duration, resolve, promise };
+    return promise;
   }
   addXray(scene) {
     // 被家具擋住時顯示淡淡剪影，避免玩家迷失位置
@@ -342,7 +492,10 @@ export class PaperCharacter {
     const x = new THREE.Mesh(this.mesh.geometry, m); x.renderOrder = 10;
     this.mesh.add(x);
   }
-  setFrame(f) { if (f !== this.frame) { this.frame = f; this.tex.offset.x = f / FRAMES; } }
+  setFrame(f) {
+    if (f === this.frame) return;
+    this.frame = f; frameUV(this.tex, f); frameUV(this.edgeTex, f);
+  }
   // screenDX>0 表示在畫面上往右走；screenDY>0 表示往畫面上方（遠離鏡頭）走
   face(screenDX, screenDY) {
     if (Math.abs(screenDX) > 0.15) this.facingRight = screenDX > 0;
@@ -350,18 +503,59 @@ export class PaperCharacter {
     // 面向右：0°（正面 3/4），面向左：180°（鏡像）。背對鏡頭時多轉 35°，紙片變窄。
     this.targetAngle = this.facingRight ? (away ? -35 : 0) : (away ? 215 : 180);
   }
+  // 除錯／展示：固定角度、狀態與畫格（null 解除）
+  freeze(opts) { this._frozen = opts; }
   update(dt, camYaw) {
+    dt = Math.min(dt, 0.1);
     this.t += dt;
-    if (this.walking) this.setFrame(2 + Math.floor(this.t * 10) % 6);
-    else this.setFrame(Math.floor(this.t * 1.6) % 2);
+    const p = this.group.position;
+    const moved = this._last ? Math.hypot(p.x - this._last.x, p.z - this._last.z) : 0;
+    this._last = { x: p.x, z: p.z };
+    let frame;
+    const fr = this._frozen;
+    if (this._interact) {
+      const it = this._interact; it.t += dt;
+      const k = Math.min(INTERACT_FRAMES.length - 1, Math.floor((it.t / it.duration) * INTERACT_FRAMES.length));
+      frame = INTERACT_FRAMES[k];
+      if (it.t >= it.duration) { this._interact = null; it.resolve(); }
+    } else if (this.walking) {
+      this.stepPhase += (moved > 1e-4 && moved < 1 ? moved : 1.6 * dt) / this.stride;
+      frame = WALK_FRAMES[Math.floor(this.stepPhase * 8) % 8];
+    } else {
+      this._blinkIn -= dt;
+      if (this._blinkIn <= 0) { this._blinkT = 0.14; this._blinkIn = 2.5 + Math.random() * 3; }
+      if (this._blinkT > 0) { this._blinkT -= dt; frame = 3; }
+      else frame = [0, 1, 2, 1][Math.floor(this.t * 2.2) % 4];
+    }
+    if (fr && fr.frame != null) frame = fr.frame;
+    this.setFrame(frame);
     // 連續 Y 軸旋轉：以固定角速度追上目標角度，轉向時會經過 90° 細線
-    let d = this.targetAngle - this.paperAngle;
-    while (d > 180) d -= 360; while (d < -180) d += 360;
-    const step = 900 * dt;
-    this.paperAngle += Math.abs(d) <= step ? d : Math.sign(d) * step;
+    const prev = this.paperAngle;
+    if (fr && fr.angle != null) this.paperAngle = fr.angle;
+    else {
+      const d = wrap180(this.targetAngle - this.paperAngle);
+      const step = this.turnSpeed * dt;
+      this.paperAngle += Math.abs(d) <= step ? d : Math.sign(d) * step;
+    }
+    this._omega = dt > 0 ? wrap180(this.paperAngle - prev) / dt : 0;
     this.pivot.rotation.y = camYaw + (this.paperAngle * Math.PI) / 180;
-    // 行走時紙片輕微晃動
-    this.pivot.position.y = this.walking ? Math.abs(Math.sin(this.t * 10 * Math.PI / 3)) * 0.03 : 0;
-    this.mesh.rotation.z = this.walking ? Math.sin(this.t * 10 * Math.PI / 6) * 0.025 : 0;
+    // 紙緣只在接近側面時顯示；俯視的透視鏡頭下，正面時它會變成穿過角色中央的一條白線
+    this.edge.visible = Math.abs(Math.cos((this.paperAngle * Math.PI) / 180)) < 0.3;
+    this.bend(dt, fr);
+  }
+  // 紙張彎曲：轉身時受空氣阻力向後捲、行走時隨步伐輕微起伏
+  bend(dt, fr) {
+    const walkB = this.walking && !this._interact ? Math.sin(this.stepPhase * Math.PI * 4) * 0.018 : 0;
+    const turnB = THREE.MathUtils.clamp(-this._omega / this.turnSpeed, -1, 1) * 0.07;
+    const target = fr && fr.bend != null ? fr.bend : walkB + turnB;
+    this._bend += (target - this._bend) * Math.min(1, dt * 14);
+    const sway = this.walking ? Math.sin(this.stepPhase * Math.PI * 2) * 0.02 : 0;
+    const pos = this.geo.attributes.position, a = pos.array, b = this.base, hw = this.w / 2, h = this.height;
+    for (let i = 0; i < a.length; i += 3) {
+      const xn = b[i] / hw, yn = Math.max(0, b[i + 1] / h);
+      a[i + 2] = this._bend * (xn * xn - 0.3) * hw * 2 + sway * yn * yn;
+    }
+    pos.needsUpdate = true;
+    this.geo.computeVertexNormals();
   }
 }
