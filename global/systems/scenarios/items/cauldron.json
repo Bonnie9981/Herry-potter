@@ -1,0 +1,195 @@
+{
+  "id": "ITEM-CAULDRON-001",
+  "kind": "cauldron",
+  "title": "坩堝：材料、火源、熬煮時間、成品／失敗批次與清潔",
+  "description": "系統測試情境，非新增正典事實；材料與配方為抽象示例，不代表原著配方。驗證 乾淨 → 已裝材料 → 加熱中 → 成品／失敗批次 → 待清潔 → 乾淨 狀態機、沒有火源不能加熱、材料數量扣除，以及熬煮需經過時間才產生結果。",
+  "rules": ["二、物件資料欄位", "四、互動判定", "五、物件狀態與連鎖互動", "六、物件組合與實驗", "八、霍格華茲互動範例", "十、互動驗收"],
+  "start_time": "1991-10-17 14:00",
+  "actors": {
+    "player": {"name": "玩家角色", "location": "地窖魔藥教室", "knows": []}
+  },
+  "verb_templates": {
+    "cauldron": {
+      "放入材料甲": {
+        "canonical": "放材料",
+        "requires": [
+          {"state": "stage", "in": ["乾淨", "已裝材料"], "reason": "坩堝目前的狀態不能再加入材料"},
+          {"actor_holds": "ingredient-a", "reason": "身上沒有材料甲"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 2,
+                      "effects": [{"consume": 1, "object": "ingredient-a"},
+                                  {"set": {"stage": "已裝材料"}}, {"increment": {"ingredients": 1}}]}]
+      },
+      "放入材料乙": {
+        "canonical": "放材料",
+        "requires": [
+          {"state": "stage", "in": ["乾淨", "已裝材料"], "reason": "坩堝目前的狀態不能再加入材料"},
+          {"actor_holds": "ingredient-b", "reason": "身上沒有材料乙"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 2,
+                      "effects": [{"consume": 1, "object": "ingredient-b"},
+                                  {"set": {"stage": "已裝材料"}}, {"increment": {"ingredients": 1}}]}]
+      },
+      "加熱": {
+        "canonical": "控制火候",
+        "requires": [
+          {"state": "stage", "equals": "已裝材料", "reason": "坩堝裡沒有待熬煮的材料"},
+          {"object": "burner", "state": "lit", "equals": true, "reason": "沒有火源，坩堝無法加熱"}
+        ],
+        "branches": [
+          {"id": "complete-recipe", "when": [{"state": "ingredients", "gte": 2}], "outcome": "success", "minutes": 1,
+           "effects": [{"set": {"stage": "加熱中"}},
+                       {"schedule": {"after": 30, "label": "熬煮完成",
+                                     "effects": [{"set": {"stage": "成品"}}, {"event": "魔藥熬煮完成"}]}}]},
+          {"id": "missing-ingredient", "outcome": "failure", "minutes": 1,
+           "note": "材料不足，加熱後只會得到失敗批次",
+           "effects": [{"set": {"stage": "加熱中"}},
+                       {"schedule": {"after": 30, "label": "批次失敗",
+                                     "effects": [{"set": {"stage": "失敗批次"}}, {"event": "材料不足，批次失敗並冒出刺鼻煙霧"}]}}]}
+        ]
+      },
+      "取樣": {
+        "canonical": "取樣",
+        "requires": [{"state": "stage", "equals": "成品", "reason": "魔藥尚未完成，無法取樣"}],
+        "branches": [{"outcome": "success", "minutes": 5,
+                      "effects": [{"set": {"stage": "待清潔"}}, {"increment": {"vials": 1}}]}]
+      },
+      "清理": {
+        "canonical": "清理",
+        "requires": [{"state": "stage", "in": ["待清潔", "失敗批次"], "reason": "坩堝目前不需要或不能清理"}],
+        "branches": [{"outcome": "success", "minutes": 10,
+                      "effects": [{"set": {"stage": "乾淨", "ingredients": 0}}]}]
+      }
+    }
+  },
+  "objects": {
+    "cauldron": {
+      "name": "錫製坩堝",
+      "type": "工具與裝備",
+      "owner": "player",
+      "holder": null,
+      "location": "地窖魔藥教室",
+      "state": {"stage": "乾淨", "ingredients": 0, "vials": 0},
+      "verbs_from": "cauldron"
+    },
+    "practice-cauldron": {
+      "name": "練習用坩堝",
+      "type": "工具與裝備",
+      "owner": "霍格華茲",
+      "holder": null,
+      "location": "地窖魔藥教室",
+      "state": {"stage": "乾淨", "ingredients": 0, "vials": 0},
+      "verbs_from": "cauldron"
+    },
+    "burner": {
+      "name": "坩堝火爐",
+      "type": "互動環境",
+      "owner": "霍格華茲",
+      "holder": null,
+      "location": "地窖魔藥教室",
+      "state": {"lit": false},
+      "verbs": {
+        "點火": {
+          "canonical": "啟動",
+          "requires": [
+            {"state": "lit", "equals": false, "reason": "火爐已經點燃"},
+            {"actor_holds": "matches", "reason": "需要火柴或點火手段"}
+          ],
+          "branches": [{"outcome": "success", "minutes": 1,
+                        "effects": [{"consume": 1, "object": "matches"}, {"set": {"lit": true}}, {"event": "火爐點燃"}]}]
+        },
+        "熄火": {
+          "canonical": "停止",
+          "requires": [{"state": "lit", "equals": true, "reason": "火爐沒有點燃"}],
+          "branches": [{"outcome": "success", "minutes": 0, "effects": [{"set": {"lit": false}}]}]
+        }
+      }
+    },
+    "ingredient-a": {
+      "name": "材料甲（抽象示例）",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 2,
+      "state": {"status": "可用"}
+    },
+    "ingredient-b": {
+      "name": "材料乙（抽象示例）",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 1,
+      "state": {"status": "可用"}
+    },
+    "matches": {
+      "name": "火柴",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 1,
+      "state": {"status": "可用"}
+    }
+  },
+  "steps": [
+    {"turn": 1, "actor": "player", "verb": "加熱", "target": "cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "沒有待熬煮的材料", "clock": "1991-10-17 14:00",
+                "objects": {"cauldron": {"state": {"stage": "乾淨"}}}}},
+    {"turn": 1, "actor": "player", "verb": "放入材料甲", "target": "cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:02",
+                "objects": {"cauldron": {"state": {"stage": "已裝材料", "ingredients": 1}},
+                            "ingredient-a": {"quantity": 1}}}},
+    {"turn": 1, "actor": "player", "verb": "放入材料乙", "target": "cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:04",
+                "objects": {"cauldron": {"state": {"ingredients": 2}},
+                            "ingredient-b": {"quantity": 0, "state": {"status": "耗盡"}}}}},
+    {"turn": 1, "actor": "player", "verb": "加熱", "target": "cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "沒有火源", "clock": "1991-10-17 14:04",
+                "objects": {"cauldron": {"state": {"stage": "已裝材料"}}, "burner": {"state": {"lit": false}}}}},
+    {"turn": 2, "actor": "player", "verb": "點火", "target": "burner",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:05",
+                "objects": {"burner": {"state": {"lit": true}}, "matches": {"quantity": 0}}}},
+    {"turn": 2, "actor": "player", "verb": "加熱", "target": "cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:06",
+                "objects": {"cauldron": {"state": {"stage": "加熱中"}}}}},
+    {"turn": 2, "actor": "player", "verb": "取樣", "target": "cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "尚未完成",
+                "objects": {"cauldron": {"state": {"stage": "加熱中", "vials": 0}}}}},
+    {"turn": 2, "actor": "player", "verb": "放入材料甲", "target": "cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "不能再加入材料",
+                "objects": {"ingredient-a": {"quantity": 1}}}},
+    {"turn": 3, "wait": 29,
+     "expect": {"outcome": "waited", "clock": "1991-10-17 14:35",
+                "objects": {"cauldron": {"state": {"stage": "加熱中"}}}}},
+    {"turn": 3, "wait": 1,
+     "expect": {"outcome": "waited", "clock": "1991-10-17 14:36", "events_contain": ["魔藥熬煮完成"],
+                "objects": {"cauldron": {"state": {"stage": "成品"}}}}},
+    {"turn": 3, "actor": "player", "verb": "取樣", "target": "cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:41",
+                "objects": {"cauldron": {"state": {"stage": "待清潔", "vials": 1}}}}},
+    {"turn": 4, "actor": "player", "verb": "放入材料甲", "target": "practice-cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 14:43",
+                "objects": {"practice-cauldron": {"state": {"stage": "已裝材料", "ingredients": 1}},
+                            "ingredient-a": {"quantity": 0}}}},
+    {"turn": 4, "actor": "player", "verb": "加熱", "target": "practice-cauldron",
+     "expect": {"outcome": "failure", "reason_contains": "材料不足",
+                "objects": {"practice-cauldron": {"state": {"stage": "加熱中"}}}}},
+    {"turn": 5, "wait": 30,
+     "expect": {"outcome": "waited", "clock": "1991-10-17 15:14", "events_contain": ["批次失敗"],
+                "objects": {"practice-cauldron": {"state": {"stage": "失敗批次"}},
+                            "cauldron": {"state": {"stage": "待清潔", "vials": 1}}}}},
+    {"turn": 5, "actor": "player", "verb": "取樣", "target": "practice-cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "尚未完成"}},
+    {"turn": 5, "actor": "player", "verb": "清理", "target": "practice-cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 15:24",
+                "objects": {"practice-cauldron": {"state": {"stage": "乾淨", "ingredients": 0}}}}},
+    {"turn": 5, "actor": "player", "verb": "清理", "target": "cauldron",
+     "expect": {"outcome": "success", "clock": "1991-10-17 15:34",
+                "objects": {"cauldron": {"state": {"stage": "乾淨", "vials": 1}}}}},
+    {"turn": 6, "actor": "player", "verb": "放入材料甲", "target": "cauldron",
+     "expect": {"outcome": "blocked", "reason_contains": "沒有材料甲",
+                "objects": {"ingredient-a": {"quantity": 0}, "cauldron": {"state": {"stage": "乾淨"}}}}}
+  ]
+}

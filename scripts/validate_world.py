@@ -8,6 +8,9 @@ import argparse
 import re
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import item_scenarios  # noqa: E402  (P2-07 replayable interaction scenarios)
+
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "global/systems/simulation-engine.md",
@@ -23,6 +26,147 @@ REQUIRED = [
     "docs/模擬回合檢查清單.md",
     "docs/霍格華茲資料庫完整度稽核.md",
 ]
+
+
+# Structural contracts for system specs added in Phase 2 (P2-02 / P2-03).
+# "sections": headings (## / ###) that must exist; matched by substring.
+# "section_fields": phrases that must appear inside the body of that section.
+# "indexes": entry documents that must link to the spec.
+SYSTEM_DOC_SPECS = {
+    "global/systems/character-state-and-progression.md": {
+        "sections": (
+            "四種不可混用的數值層", "天賦", "基礎能力", "技能與熟練度", "當下狀態",
+            "關係與聲望", "判定流程", "成長", "角色建立與日常查詢", "避免數值膨脹",
+        ),
+        "section_fields": {
+            "基礎能力": ("1–10", "力量", "敏捷", "感知", "意志"),
+            "技能與熟練度": ("0–100", "初學", "合格", "專精"),
+            "當下狀態": ("疲勞", "傷勢", "飢餓", "壓力", "不預設巫師有通用 MP 魔力條"),
+            "關係與聲望": ("熟悉", "信任", "尊重", "戒心", "敵意", "聲望"),
+            "判定流程": ("自動成功", "成功但付代價", "部分成功", "失敗但有進展", "無法嘗試"),
+            "成長": ("練習", "投入時間"),
+        },
+        "indexes": ("global/systems/README.md", "global/README.md", "README.md"),
+    },
+    "global/systems/item-and-world-interaction.md": {
+        "sections": (
+            "物件類型", "物件資料欄位", "通用互動動詞", "互動判定", "物件狀態與連鎖互動",
+            "物件組合與實驗", "場景互動密度", "互動範例", "經濟與物品流向", "互動驗收",
+        ),
+        "section_fields": {
+            "物件資料欄位": (
+                "持有人", "目前位置", "狀態", "前置條件", "互動耗時", "消耗", "風險", "轉移紀錄",
+            ),
+            "通用互動動詞": ("打開", "解鎖", "閱讀", "拿取", "交付"),
+            "互動判定": ("可接觸", "鑰匙", "時間", "部分成功"),
+            "物件狀態與連鎖互動": ("門", "書", "坩堝", "信件", "時間與因果"),
+            "互動範例": ("門鎖", "坩堝", "寵物", "圖書館書籍"),
+            "互動驗收": ("跨回合", "同一物件不會同時出現在兩個位置"),
+        },
+        "indexes": ("global/systems/README.md", "global/README.md", "README.md"),
+    },
+}
+SYSTEMS_INDEX = "global/systems/README.md"
+
+HEADING_RE = re.compile(r"^(#{2,3})\s+(.+?)\s*$")
+LINK_RE = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
+
+
+def markdown_headings(markdown: str):
+    """Return (level, title) for every ## / ### heading."""
+    headings = []
+    for line in markdown.splitlines():
+        match = HEADING_RE.match(line)
+        if match:
+            headings.append((len(match.group(1)), match.group(2)))
+    return headings
+
+
+def section_text(markdown: str, phrase: str):
+    """Body of the first ##/### heading containing ``phrase`` (None if absent).
+
+    The body runs until the next heading of the same or a higher level.
+    """
+    lines = markdown.splitlines()
+    for index, line in enumerate(lines):
+        match = HEADING_RE.match(line)
+        if not match or phrase not in match.group(2):
+            continue
+        level = len(match.group(1))
+        body = []
+        for following in lines[index + 1:]:
+            other = HEADING_RE.match(following)
+            if other and len(other.group(1)) <= level:
+                break
+            body.append(following)
+        return "\n".join(body)
+    return None
+
+
+def index_links(markdown: str, index_path: Path, root: Path):
+    """Resolve relative Markdown links in an index file to root-relative POSIX paths."""
+    targets = set()
+    base = index_path.parent
+    for target in LINK_RE.findall(markdown):
+        if "://" in target:
+            continue
+        resolved = (base / target).resolve()
+        try:
+            targets.add(resolved.relative_to(root.resolve()).as_posix())
+        except ValueError:
+            continue
+    return targets
+
+
+def check_system_docs(root: Path = ROOT, specs=None):
+    """P2-06: structural, contract-field and index checks for system specs."""
+    specs = SYSTEM_DOC_SPECS if specs is None else specs
+    errors = []
+    link_cache = {}
+
+    def links_of(relative):
+        if relative not in link_cache:
+            path = root / relative
+            link_cache[relative] = (
+                index_links(path.read_text(encoding="utf-8"), path, root) if path.is_file() else None
+            )
+        return link_cache[relative]
+
+    for relative, spec in specs.items():
+        path = root / relative
+        if not path.is_file():
+            errors.append(f"缺少系統規格文件：{relative}")
+            continue
+        content = path.read_text(encoding="utf-8")
+        titles = [title for _, title in markdown_headings(content)]
+        for section in spec.get("sections", ()):
+            if not any(section in title for title in titles):
+                errors.append(f"{relative} 缺少必要章節：{section}")
+        for section, phrases in spec.get("section_fields", {}).items():
+            body = section_text(content, section)
+            if body is None:
+                if section not in spec.get("sections", ()):
+                    errors.append(f"{relative} 缺少必要章節：{section}")
+                continue
+            for phrase in phrases:
+                if phrase not in body:
+                    errors.append(f"{relative}「{section}」章節缺少契約欄位：{phrase}")
+        for index in spec.get("indexes", ()):
+            links = links_of(index)
+            if links is None:
+                errors.append(f"缺少索引文件：{index}")
+            elif relative not in links:
+                errors.append(f"{index} 未列出系統文件：{relative}")
+
+    # Every top-level system spec must be reachable from the systems index.
+    systems_dir = root / "global/systems"
+    links = links_of(SYSTEMS_INDEX)
+    if systems_dir.is_dir() and links is not None:
+        for path in sorted(systems_dir.glob("*.md")):
+            relative = path.relative_to(root).as_posix()
+            if path.name != "README.md" and relative not in links:
+                errors.append(f"{SYSTEMS_INDEX} 未列出系統文件：{relative}")
+    return errors
 
 
 def talent_values(markdown: str):
@@ -99,6 +243,9 @@ def validate(root: Path = ROOT):
             for phrase in phrases:
                 if phrase not in content:
                     errors.append(f"{relative} 缺少必要模擬契約：{phrase}")
+
+    errors.extend(check_system_docs(root))
+    errors.extend(item_scenarios.validate_all(root))
 
     reflection = root / "docs/自我反思與修正流程.md"
     if reflection.is_file():

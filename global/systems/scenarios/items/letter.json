@@ -1,0 +1,97 @@
+{
+  "id": "ITEM-LETTER-001",
+  "kind": "letter",
+  "title": "信件：封口、貓頭鷹寄送、運送時間、拆閱與重複拆閱",
+  "description": "系統測試情境，非新增正典事實；運送時間為示例值。驗證 未寄出 → 已封口 → 運送中 → 已送達 → 已閱讀 狀態機、寄送地點限制、運送途中無法被收件人接觸，以及已拆閱的信不能再拆一次。",
+  "rules": ["二、物件資料欄位", "四、互動判定", "五、物件狀態與連鎖互動", "九、經濟與物品流向", "十、互動驗收"],
+  "start_time": "1991-10-24 08:00",
+  "actors": {
+    "player": {"name": "玩家角色", "location": "交誼廳", "knows": []},
+    "school-owl": {"name": "學校貓頭鷹", "location": "貓頭鷹屋", "knows": []},
+    "family": {"name": "家人（示例 NPC）", "location": "家中", "knows": []}
+  },
+  "objects": {
+    "letter-home": {
+      "name": "寄回家的信",
+      "type": "知識物件",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "state": {"status": "未寄出", "sealed": false, "opened": false},
+      "verbs": {
+        "封口": {
+          "canonical": "關閉",
+          "requires": [{"state": "sealed", "equals": false, "reason": "信已經封口"}],
+          "branches": [{"outcome": "success", "minutes": 2,
+                        "effects": [{"set": {"sealed": true, "status": "已封口"}}]}]
+        },
+        "寄出": {
+          "canonical": "交付",
+          "requires": [
+            {"state": "status", "equals": "已封口", "reason": "信件需先封口才能寄出"},
+            {"actor_at": "貓頭鷹屋", "reason": "需要到貓頭鷹屋把信交給貓頭鷹"}
+          ],
+          "branches": [{"outcome": "success", "minutes": 5,
+                        "effects": [{"give": "school-owl"}, {"set": {"status": "運送中"}}, {"event": "信件交給學校貓頭鷹"},
+                                    {"schedule": {"after": 240, "label": "貓頭鷹送達",
+                                                  "effects": [{"give": "family"}, {"set": {"status": "已送達"}},
+                                                              {"event": "信件送達家中"}]}}]}]
+        },
+        "拆信": {
+          "canonical": "打開",
+          "requires": [
+            {"holder": "$actor", "reason": "信不在你手上"},
+            {"state": "opened", "equals": false, "reason": "信件已經拆閱過"}
+          ],
+          "branches": [{"outcome": "success", "minutes": 1, "effects": [{"set": {"opened": true}}]}]
+        },
+        "閱讀": {
+          "canonical": "閱讀",
+          "requires": [{"state": "opened", "equals": true, "reason": "信件尚未拆開"}],
+          "branches": [{"outcome": "success", "minutes": 5,
+                        "effects": [{"set": {"status": "已閱讀"}}, {"event": "家人讀完來信"}]}]
+        }
+      }
+    }
+  },
+  "steps": [
+    {"turn": 1, "actor": "player", "verb": "寄出", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "先封口", "clock": "1991-10-24 08:00",
+                "objects": {"letter-home": {"holder": "player", "state": {"status": "未寄出"}}}}},
+    {"turn": 1, "actor": "player", "verb": "封口", "target": "letter-home",
+     "expect": {"outcome": "success", "clock": "1991-10-24 08:02",
+                "objects": {"letter-home": {"state": {"status": "已封口", "sealed": true}}}}},
+    {"turn": 1, "actor": "player", "verb": "封口", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "已經封口"}},
+    {"turn": 1, "actor": "player", "verb": "寄出", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "貓頭鷹屋",
+                "objects": {"letter-home": {"holder": "player", "state": {"status": "已封口"}}}}},
+    {"turn": 1, "actor": "player", "move_to": "貓頭鷹屋", "minutes": 10,
+     "expect": {"outcome": "moved", "clock": "1991-10-24 08:12"}},
+    {"turn": 1, "actor": "player", "verb": "寄出", "target": "letter-home",
+     "expect": {"outcome": "success", "clock": "1991-10-24 08:17",
+                "objects": {"letter-home": {"holder": "school-owl", "location": null, "state": {"status": "運送中"}}}}},
+    {"turn": 2, "actor": "family", "verb": "拆信", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "可接觸範圍",
+                "objects": {"letter-home": {"holder": "school-owl", "state": {"opened": false}}}}},
+    {"turn": 2, "actor": "player", "verb": "拆信", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "可接觸範圍"}},
+    {"turn": 2, "wait": 239,
+     "expect": {"outcome": "waited", "clock": "1991-10-24 12:16",
+                "objects": {"letter-home": {"holder": "school-owl", "state": {"status": "運送中"}}}}},
+    {"turn": 2, "wait": 1,
+     "expect": {"outcome": "waited", "clock": "1991-10-24 12:17", "events_contain": ["信件送達家中"],
+                "objects": {"letter-home": {"holder": "family", "location": null, "state": {"status": "已送達"}}}}},
+    {"turn": 3, "actor": "family", "verb": "閱讀", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "尚未拆開"}},
+    {"turn": 3, "actor": "family", "verb": "拆信", "target": "letter-home",
+     "expect": {"outcome": "success", "clock": "1991-10-24 12:18",
+                "objects": {"letter-home": {"state": {"opened": true, "status": "已送達"}}}}},
+    {"turn": 3, "actor": "family", "verb": "閱讀", "target": "letter-home",
+     "expect": {"outcome": "success", "clock": "1991-10-24 12:23",
+                "objects": {"letter-home": {"holder": "family", "state": {"status": "已閱讀"}}}}},
+    {"turn": 4, "actor": "family", "verb": "拆信", "target": "letter-home",
+     "expect": {"outcome": "blocked", "reason_contains": "已經拆閱",
+                "objects": {"letter-home": {"state": {"opened": true, "status": "已閱讀"}}}}}
+  ]
+}
