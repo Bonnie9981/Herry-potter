@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#18211d">
+<title>霍格華茲｜2.5D 紙片人物原型</title>
+<style>
+:root{color-scheme:dark;--ink:#eee7d8;--gold:#d8bd83;--panel:#202b25;--line:#586353}
+*{box-sizing:border-box}body{margin:0;background:#121a17;color:var(--ink);font:15px/1.5 system-ui,"Noto Sans TC",sans-serif}
+.app{max-width:1100px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.top strong{letter-spacing:.12em;color:var(--gold)}.top a{color:var(--gold)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px}.stage{position:relative;overflow:hidden;border:1px solid #66705c;border-radius:16px;background:#27332b;min-height:570px;isolation:isolate}
+.scene{position:absolute;inset:0;width:100%;height:100%}.floor{cursor:crosshair}.hotspot{cursor:pointer;transition:filter .15s}.hotspot:hover{filter:brightness(1.25)}.char-wrap{position:absolute;width:78px;height:150px;left:50%;top:68%;transform:translate(-50%,-100%);transform-style:preserve-3d;transition:left .75s ease,top .75s ease;z-index:4;pointer-events:none}
+.char{width:100%;height:100%;transform-style:preserve-3d;transform-origin:center center;transition:transform .28s ease;filter:drop-shadow(0 4px 2px #10151099)}
+.char svg{width:100%;height:100%;overflow:visible}.char .back{transform:rotateY(180deg);backface-visibility:visible}
+.char.walk{animation:bob .22s infinite alternate ease-in-out}@keyframes bob{to{translate:0 -3px}}
+.char-wrap.moving .char{animation:bob .22s infinite alternate ease-in-out}
+.panel{background:linear-gradient(150deg,#26332b,#1a241f);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel h2{font:500 1.2rem Georgia,serif;color:var(--gold);margin:0 0 10px}.muted{color:#b8b9aa;font-size:.88rem}.actions{display:grid;gap:8px;margin-top:12px}
+button{font:inherit;color:var(--ink);background:#344238;border:1px solid #63715c;border-radius:9px;padding:10px;text-align:left;cursor:pointer}button:hover{background:#455442}button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.status{padding:10px;background:#151e19;border-radius:9px;min-height:72px}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;color:#c5c0af;font-size:.8rem}
+.toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#111a16eF;border:1px solid #778064;border-radius:99px;padding:8px 14px;white-space:nowrap;z-index:8}
+.hint{font-size:.82rem;color:#b9b7a9;margin:8px 0 0}.backlink{display:inline-block;margin:10px 0;color:#d8bd83}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.stage{min-height:480px}.panel{order:2}.app{padding:12px}.char-wrap{width:65px;height:126px}}
+</style>
+</head>
+<body><main class="app">
+<header class="top"><strong>HOGWARTS · PAPER WORLD</strong><span class="muted">2.5D 互動原型 0.1</span></header>
+<div class="layout">
+<section class="stage" id="stage" aria-label="霍格華茲教室場景，點擊地板可移動">
+<svg class="scene" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="手繪風魔法教室">
+<defs>
+ <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#52604b"/><stop offset="1" stop-color="#29382f"/></linearGradient>
+ <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#927a55"/><stop offset="1" stop-color="#4b4635"/></linearGradient>
+ <linearGradient id="glass" x2="1" y2="1"><stop stop-color="#8aa9a1"/><stop offset=".5" stop-color="#d2b77b"/><stop offset="1" stop-color="#6e7770"/></linearGradient>
+ <pattern id="tiles" width="90" height="54" patternUnits="userSpaceOnUse"><path d="M0 0H90M0 0L45 54M90 0L45 54" stroke="#c0a77b" stroke-opacity=".16" fill="none"/></pattern>
+</defs>
+<rect width="900" height="600" fill="#1b2922"/>
+<!-- back wall -->
+<path d="M0 0H900V365L450 470 0 365Z" fill="url(#wall)"/>
+<path d="M0 0H900V24H0Z" fill="#17221d"/>
+<!-- stone divisions -->
+<g stroke="#9d987d" stroke-opacity=".22" stroke-width="5" fill="none"><path d="M90 0V390M270 0V410M630 0V410M810 0V390"/><path d="M0 175H900M0 335H900"/></g>
+<!-- window -->
+<path d="M350 42Q450 -5 550 42V252H350Z" fill="#18251f" stroke="#b49a68" stroke-width="12"/>
+<path d="M366 49Q450 12 534 49V240H366Z" fill="url(#glass)"/>
+<g stroke="#695d45" stroke-width="8"><path d="M450 30V244M366 143H534"/></g>
+<path d="M366 143L450 30 534 143 450 244Z" fill="none" stroke="#d8c18d" stroke-width="4" opacity=".8"/>
+<!-- shelves -->
+<g class="hotspot" data-object="書架" tabindex="0" role="button" aria-label="檢查書架">
+<rect x="32" y="62" width="220" height="270" rx="5" fill="#34291f" stroke="#b38b55" stroke-width="9"/>
+<g fill="#8c563b" stroke="#d0a56c" stroke-width="2"><rect x="48" y="90" width="28" height="90"/><rect x="82" y="78" width="25" height="102" fill="#49604e"/><rect x="112" y="100" width="32" height="80" fill="#72533a"/><rect x="150" y="84" width="26" height="96" fill="#5b5269"/><rect x="182" y="94" width="48" height="86" fill="#8a7145"/><rect x="48" y="202" width="35" height="110" fill="#56644c"/><rect x="89" y="214" width="27" height="98"/><rect x="122" y="196" width="42" height="116" fill="#6b4b62"/><rect x="170" y="208" width="58" height="104" fill="#55627a"/></g>
+<path d="M35 188H249M35 320H249" stroke="#b38b55" stroke-width="10"/>
+</g>
+<!-- board -->
+<g class="hotspot" data-object="黑板" tabindex="0" role="button" aria-label="查看黑板">
+<rect x="665" y="78" width="195" height="150" rx="6" fill="#17251f" stroke="#a98958" stroke-width="10"/>
+<path d="M700 125q35 -32 65 0t65 0M705 170h105" fill="none" stroke="#d9d1ae" stroke-width="4" opacity=".7"/>
+</g>
+<!-- floor -->
+<path class="floor" id="floor" d="M0 365L450 470 900 365V600H0Z" fill="url(#floor)"/>
+<path d="M0 365L450 470 900 365V600H0Z" fill="url(#tiles)"/>
+<!-- rug -->
+<path d="M270 438L450 395 635 438 450 520Z" fill="#673b35" stroke="#d0b47b" stroke-width="5"/>
+<path d="M310 438L450 407 594 438 450 501Z" fill="none" stroke="#d0b47b" stroke-width="2"/>
+<!-- desk -->
+<g class="hotspot" data-object="課桌" tabindex="0" role="button" aria-label="查看課桌">
+<path d="M565 330L770 300 835 330 628 367Z" fill="#80603d" stroke="#c39a62" stroke-width="5"/>
+<path d="M628 367V445M810 332V410" stroke="#493321" stroke-width="13"/>
+<path d="M655 310l60 -10 26 15 -62 12Z" fill="#e0d3ad" stroke="#8c704c" stroke-width="3"/>
+</g>
+<!-- door -->
+<g class="hotspot" data-object="教室門" tabindex="0" role="button" aria-label="查看教室門">
+<path d="M20 205V365L145 394V205Q82 158 20 205Z" fill="#4a3426" stroke="#b58d58" stroke-width="9"/>
+<circle cx="125" cy="300" r="6" fill="#e4c477"/>
+</g>
+</svg>
+<div class="char-wrap" id="character">
+ <div class="char" id="paper">
+ <svg viewBox="0 0 120 220" aria-label="白邊紙片學生">
+ <g stroke="#fffaf0" stroke-width="9" stroke-linejoin="round" paint-order="stroke fill">
+  <path d="M42 67L28 103 20 140 30 144 49 112 52 82M78 67L93 102 101 139 91 144 72 111 68 82" fill="#7d2632"/>
+  <path d="M43 112L38 177 31 205 52 207 61 151 68 207 91 207 81 175 78 112Z" fill="#252a2b"/>
+  <path d="M39 57Q60 42 81 57L83 121Q60 136 37 121Z" fill="#5a2634"/>
+  <path d="M43 68L60 121 77 68" fill="#e5d9bd" stroke-width="5"/>
+  <path d="M51 72L60 104 69 72" fill="#b58a43" stroke-width="3"/>
+  <path d="M35 25Q35 4 61 7Q88 7 87 34L82 63Q75 79 59 79Q43 77 37 59Z" fill="#eac49b"/>
+  <path d="M34 37Q23 8 52 5Q83 -2 91 24L82 37 76 22Q57 36 34 37Z" fill="#49352d"/>
+  <path d="M39 48Q48 42 54 49M67 49Q76 42 82 49" fill="none" stroke="#3a302b" stroke-width="4"/>
+  <path d="M51 62Q60 67 69 61" fill="none" stroke="#9c5d54" stroke-width="3"/>
+  <path d="M27 103L18 143M94 103L103 143" fill="none" stroke="#eac49b" stroke-width="7"/>
+ </g>
+ </svg>
+ </div>
+</div>
+<div class="toast" id="toast">點擊地板移動，或點擊物件互動</div>
+</section>
+<aside class="panel">
+<h2>教室 · 下午</h2><div class="muted">星期一 14:20 · 魔法教室</div>
+<p class="status" id="status" aria-live="polite">你站在教室中央。午後的光從高窗落下，桌上留著一本沒收好的課本。</p>
+<div class="actions">
+<button data-action="書架">查看書架</button><button data-action="課桌">檢查課桌</button><button data-action="黑板">閱讀黑板</button><button data-action="教室門">走向教室門</button><button id="turn">原地轉身 180°</button>
+</div>
+<p class="hint">操作：點擊地板移動；點擊場景物件或右側按鈕互動。角色會依移動方向轉身。</p>
+<div class="legend"><span>✦ 白邊紙片人物</span><span>✦ 正反面鏡像</span><span>✦ 簡單深度層</span></div>
+</aside></div>
+<a class="backlink" href="./index.html">← 返回入學大廳</a>
+</main>
+<script>
+const stage=document.getElementById('stage'),wrap=document.getElementById('character'),paper=document.getElementById('paper'),status=document.getElementById('status'),toast=document.getElementById('toast');
+let angle=0;
+function turnTo(dx){if(Math.abs(dx)<2)return;angle=dx<0?0:180;paper.style.transform='rotateY('+angle+'deg)';}
+function move(clientX,clientY){const r=stage.getBoundingClientRect();const x=Math.max(7,Math.min(93,(clientX-r.left)/r.width*100));const y=Math.max(45,Math.min(91,(clientY-r.top)/r.height*100));const old=parseFloat(wrap.style.left)||50;turnTo(x-old);wrap.classList.add('moving');wrap.style.left=x+'%';wrap.style.top=y+'%';setTimeout(()=>wrap.classList.remove('moving'),780);toast.textContent='移動中……';setTimeout(()=>toast.textContent='抵達目的地',780);}
+stage.addEventListener('click',e=>{const target=e.target.closest('[data-object]');if(target){interact(target.dataset.object);return;}if(e.target.closest('button'))return;move(e.clientX,e.clientY);});
+function interact(name){const messages={書架:'你走近書架。厚重的魔法史、變形學與幾本沒有標題的舊書整齊排列。可以再挑一本仔細閱讀。',課桌:'桌上有一本課本、一支羽毛筆，以及一張被壓在書下的羊皮紙。',黑板:'黑板上還留著上一堂課的咒語筆記，粉筆字有些模糊。',教室門:'你走到教室門旁。門沒有上鎖，可以前往走廊。'};status.textContent=messages[name]||'你仔細觀察了這個地方。';toast.textContent='互動：'+name;}
+document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.action;const r=stage.getBoundingClientRect();const points={書架:[15,53],課桌:[79,65],黑板:[83,39],教室門:[13,69]};const p=points[name];move(r.left+r.width*p[0]/100,r.top+r.height*p[1]/100);setTimeout(()=>interact(name),820);}));
+document.getElementById('turn').addEventListener('click',()=>{angle=(angle+180)%360;paper.style.transform='rotateY('+angle+'deg)';toast.textContent=angle===0?'面向正面':'轉身：鏡像背面';});
+</script></body></html>
