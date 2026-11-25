@@ -25,6 +25,16 @@ class WorldQualityTests(unittest.TestCase):
         for phrase in ("NPC", "時間", "物品", "存檔", "玩家"):
             self.assertIn(phrase, text)
 
+    def test_attribute_layers_are_separated(self):
+        text = (ROOT / "global/systems/character-state-and-progression.md").read_text(encoding="utf-8")
+        for phrase in ("天賦", "基礎能力", "技能與熟練度", "當下狀態"):
+            self.assertIn(phrase, text)
+
+    def test_item_interactions_have_state_and_preconditions(self):
+        text = (ROOT / "global/systems/item-and-world-interaction.md").read_text(encoding="utf-8")
+        for phrase in ("物件資料欄位", "通用互動動詞", "互動判定", "物件狀態與連鎖互動"):
+            self.assertIn(phrase, text)
+
 
 if __name__ == "__main__":
     unittest.main()
