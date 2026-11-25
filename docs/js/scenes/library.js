@@ -23,7 +23,7 @@ export function build() {
 
   K.floor(b, T.stoneFloor("warm"), { tile: 2.6 });
   // 欄杆外的下層地面，避免畫面邊緣出現黑色空洞
-  K.floor(b, T.stoneFloor("grey"), { tile: 3, x: -6, z: -2, w: 34, d: 28, y: -3.2 });
+  K.floor(b, T.stoneFloor("grey"), { tile: 3, x: -6, z: -2, w: 34, d: 28, y: -3.2, color: 0x4a3a2e });
   K.ceilingShadow(b, H);
 
   // 西牆：三扇拱窗
@@ -95,13 +95,14 @@ export function build() {
   b.hotspot({ id: "crystal", name: "櫃台上的水晶球", kind: "物件", x: 15.6, z: 4.8, actions: ["調查"], desc: "球心有一縷淡藍色的霧氣在打轉。" });
   b.hotspot({ id: "window", name: "高窗", kind: "環境", x: 1.0, z: 7.6, actions: ["眺望", "休息"], desc: "窗外是傍晚的庭園與樹梢。" });
 
-  b.spot("管理員櫃台", 14.6, 5.4);
-  b.spot("閱讀桌A", 5.9, 7.7);
-  b.spot("閱讀桌B", 4.1, 10.3);
-  b.spot("窗邊", 2.0, 9.6);
-  b.spot("書架前", 13.4, 1.4);
+  // NPC 日程用的具名位置（名稱與 npcs.js 約定）
+  b.spot("中央", 10.0, 8.6);
+  b.spot("書桌前", 7.1, 6.6);
+  b.spot("靠窗書桌", 2.7, 11.6);
+  b.spot("書架間", 13.4, 1.4);
+  b.spot("索引櫃", 8.6, 2.1);
+  b.spot("借閱櫃台", 14.6, 5.4);
   b.spot("星圖前", 17.9, 1.6);
-  b.spot("書桌前", 15.0, 10.8);
   b.spot("天球儀旁", 16.4, 8.2);
 
   return b.result({
@@ -109,6 +110,6 @@ export function build() {
     desc: "高聳書架、閱讀桌與午後陽光。",
     spawn: { x: 10.5, z: 13.2 },
     entries: { corridor: { x: 10.5, z: 1.9 }, hall: { x: 10.5, z: 13.4 } },
-    lighting: { indoor: true, sunDir: SUN_DIR, sunColor: 0xffc58a, sunIntensity: 7.5, ambient: 0x9a7050, hemiSky: 0xffdcae, hemiGround: 0x4a3020, hemiIntensity: 1.4 },
+    lighting: { indoor: true, sunDir: SUN_DIR, sunColor: 0xffc58a, sunIntensity: 7.5, ambient: 0x8a6448, hemiSky: 0xffdcae, hemiGround: 0x4a3020, hemiIntensity: 1.1 },
   });
 }

@@ -66,6 +66,7 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.fov = w / h < 0.8 ? 40 : 30;
+  if (!resize.done) { camDist = w / h < 0.8 ? 22 : 17; resize.done = true; }
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
@@ -290,8 +291,9 @@ const markerEls = new Map();
 function allHotspots() {
   const list = world ? world.hotspots.map(h => ({ ...h, y: h.y ?? 1.3 })) : [];
   if (director) for (const n of director.present()) {
-    const p = n.character.group.position;
-    list.push({ id: "npc:" + n.id, npc: n.id, name: n.name, kind: "人物", x: p.x, z: p.z, y: 2.05, actions: ["交談", "觀察"], desc: n.role, hasNews: n.hasNews });
+    if (n.leaving) continue;
+    const rel = director.relationship(n.id);
+    list.push({ id: "npc:" + n.id, npc: n.id, name: n.name, kind: "人物", x: n.x, z: n.z, y: 2.55, actions: ["交談", "觀察"], desc: n.activity, hasNews: rel && !rel.met });
   }
   return list;
 }
@@ -378,7 +380,7 @@ function openActionMenu(hs) {
   list.replaceChildren();
   const p = player.group.position;
   faceFromWorld(player, hs.x - p.x, hs.z - p.z);
-  if (hs.npc && director) director.faceTowards(hs.npc, p);
+  if (hs.npc && director) { const n = director.present().find(a => a.id === hs.npc); if (n && n.char && !n.walking) faceFromWorld(n.char, p.x - n.x, p.z - n.z); }
   const acts = [...hs.actions, "取消"];
   acts.forEach((a, i) => {
     const b = document.createElement("button");
@@ -400,14 +402,16 @@ function closeActionMenu() { $("#action-menu").hidden = true; }
 
 function act(hs, a) {
   if (hs.npc && director) {
-    if (a === "交談") { const r = director.talk(hs.npc, gameApi()); if (r) showDialog(r); return; }
-    toast(director.observe ? director.observe(hs.npc, gameApi()) : `${hs.name}${hs.desc ? "：" + hs.desc : ""}`); return;
+    if (a === "交談") { showDialog(hs.npc, director.talk(hs.npc, state)); return; }
+    const rel = director.relationship(hs.npc);
+    toast(`${hs.name}${hs.desc ? "正在" + hs.desc : ""}。（${rel ? rel.tierLabel : ""}）`); return;
   }
   const q = state.quest;
   let text = hs.desc || "";
   if (hs.id === "book" && a === "閱讀") {
     if (!state.inventory.includes("折起來的羊皮紙")) state.inventory.push("折起來的羊皮紙");
     if (q.step === 0) q.step = 1;
+    if (director) director.witness("read-old-book");
     text = "你翻開古書，泛黃的書頁間夾著一張折起來的羊皮紙，上面的字跡細而急：「鐘聲響起後，別走東側樓梯。星圖上多了一顆不該存在的星。」";
   } else if (hs.id === "chart" && q.step >= 1) {
     if (q.step === 1) q.step = 2;
@@ -427,19 +431,28 @@ function act(hs, a) {
 }
 
 // ───────────────────────── 對話框 ─────────────────────────
-function showDialog(r) {
+let npcLooks = {};
+function showDialog(npcId, r) {
+  if (!r) return;
   const d = $("#dialog");
-  $("#dialog-name").textContent = r.speaker;
+  if (r.minutes) advance(r.minutes);
+  if (r.effects && r.effects.item && !state.inventory.includes(r.effects.item)) { state.inventory.push(r.effects.item); toast(`你得到了「${r.effects.item}」。`); }
+  if (npcId && state.quest.step === 2) { state.quest.step = 3; setTimeout(() => toast("任務完成：你把紙條的事告訴了別人，也得知東側樓梯在第七聲鐘響後會轉向未知的樓層。", 7000), 400); }
+  $("#dialog-name").textContent = r.speaker + (r.relationship ? `　·　${r.relationship.tierLabel}` : "");
   $("#dialog-text").textContent = r.text;
-  const pic = $("#dialog-portrait");
-  if (r.look) { pic.style.backgroundImage = `url(${portraitDataURL(r.look)})`; pic.hidden = false; } else pic.hidden = true;
+  const pic = $("#dialog-portrait"), look = npcLooks[npcId];
+  if (look) { pic.style.backgroundImage = `url(${portraitDataURL(look)})`; pic.hidden = false; } else pic.hidden = true;
   const opts = $("#dialog-options"); opts.replaceChildren();
-  (r.options && r.options.length ? r.options : [{ label: "結束對話" }]).forEach(o => {
+  (r.options && r.options.length ? r.options : [{ id: null, label: "結束對話" }]).forEach(o => {
     const b = document.createElement("button"); b.textContent = o.label;
-    b.addEventListener("click", () => { const next = o.next ? o.next() : null; if (next) showDialog(next); else d.hidden = true; updateQuestHud(); });
+    b.addEventListener("click", () => {
+      if (!o.id || o.id === "bye") { if (o.id === "bye") director.talk(npcId, state, "bye"); d.hidden = true; updateQuestHud(); return; }
+      showDialog(npcId, director.talk(npcId, state, o.id)); updateQuestHud();
+    });
     opts.append(b);
   });
-  d.hidden = false; advance(3);
+  d.hidden = false;
+  updateQuestHud();
 }
 
 // ───────────────────────── 時間與光線 ─────────────────────────
@@ -569,11 +582,14 @@ const npcApi = {
   faceFromWorld, sceneSpot: name => (world && world.npcSpots[name]) ? { x: world.npcSpots[name][0], z: world.npcSpots[name][1] } : null,
   exitTo: sceneId => { const e = world && world.exits.find(x => x.to === sceneId); return e ? { x: e.x, z: e.z } : (world ? { x: world.spawn.x, z: world.spawn.z } : null); },
   currentScene: () => state.scene, playerPos: () => player.group.position,
+  notify: evt => { if (evt && evt.text && $("#intro").hidden) toast(evt.text); },
+  camYaw: YAW,
 };
 async function initNpcs() {
   try {
     const mod = await import("./npcs.js");
     director = new mod.NpcDirector(npcApi);
+    for (const n of mod.NPCS) npcLooks[n.id] = n.look;
     if (state.npc) director.load(state.npc);
   } catch (e) { console.info("NPC 模組尚未就緒：", e.message); director = null; }
 }
@@ -618,7 +634,7 @@ function frame() {
   if (playing && !uiBlocking()) { clockAcc += dt; if (clockAcc >= 1) { advance(Math.floor(clockAcc)); clockAcc %= 1; } }
   $("#clock").textContent = fmtClock() + "　" + phaseName();
   if (world) world.update(dt, clockObj());
-  if (director) director.update(dt, clockObj());
+  if (director) { director.update(dt, clockObj()); for (const n of director.present()) if (n.char) n.char.update(dt, YAW); }
   // 出口
   exitCooldown -= dt;
   if (world && !transitioning && exitCooldown <= 0) {
