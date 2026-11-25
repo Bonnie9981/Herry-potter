@@ -1,0 +1,141 @@
+{
+  "id": "ITEM-BOOK-001",
+  "kind": "book",
+  "title": "圖書館書籍：借閱權限、翻閱、做筆記、受潮與歸還",
+  "description": "系統測試情境，非新增正典事實。驗證書籍 未讀 → 已翻閱 → 已做筆記 狀態、限制區權限、消耗品（羊皮紙）扣除、借出／歸還的位置與持有人轉移，以及受潮造成部分成功。",
+  "rules": ["二、物件資料欄位", "四、互動判定", "五、物件狀態與連鎖互動", "八、霍格華茲互動範例", "九、經濟與物品流向", "十、互動驗收"],
+  "start_time": "1991-10-10 19:00",
+  "actors": {
+    "player": {"name": "玩家角色", "location": "圖書館", "knows": []}
+  },
+  "verb_templates": {
+    "library-book": {
+      "借閱": {
+        "canonical": "借閱",
+        "requires": [
+          {"state": "shelf_status", "equals": "在架", "reason": "這本書目前不在架上"},
+          {"any": [{"state": "restricted", "equals": false}, {"actor_holds": "permission-slip"}],
+           "reason": "限制區書籍需要教授簽名的許可"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 5,
+                      "effects": [{"take": "$actor"}, {"set": {"shelf_status": "借出"}}, {"event": "圖書館借閱登記"}]}]
+      },
+      "翻閱": {
+        "canonical": "翻閱",
+        "branches": [
+          {"id": "damp", "when": [{"state": "condition", "equals": "受潮"}], "outcome": "partial", "minutes": 20,
+           "note": "部分頁面受潮，文字無法辨識", "effects": [{"set": {"read_progress": "已翻閱"}}]},
+          {"id": "read", "outcome": "success", "minutes": 30, "effects": [{"set": {"read_progress": "已翻閱"}}]}
+        ]
+      },
+      "做筆記": {
+        "canonical": "做筆記",
+        "requires": [
+          {"state": "read_progress", "in": ["已翻閱", "已做筆記"], "reason": "需要先翻閱內容才能做筆記"},
+          {"actor_holds": "quill", "reason": "需要羽毛筆"},
+          {"actor_holds": "parchment", "reason": "需要羊皮紙"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 30,
+                      "effects": [{"consume": 1, "object": "parchment"}, {"set": {"read_progress": "已做筆記"}}]}]
+      },
+      "歸還": {
+        "canonical": "放下",
+        "requires": [
+          {"holder": "$actor", "reason": "這本書不在你手上"},
+          {"actor_at": "圖書館", "reason": "需要回到圖書館才能歸還"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 3,
+                      "effects": [{"place": "$here"}, {"set": {"shelf_status": "在架"}}, {"event": "圖書館歸還登記"}]}]
+      }
+    }
+  },
+  "objects": {
+    "charm-reference": {
+      "name": "咒語入門參考書（示例）",
+      "type": "知識物件",
+      "owner": "霍格華茲圖書館",
+      "holder": null,
+      "location": "圖書館",
+      "state": {"shelf_status": "在架", "read_progress": "未讀", "condition": "完好", "restricted": false},
+      "verbs_from": "library-book"
+    },
+    "restricted-tome": {
+      "name": "限制區藏書（示例）",
+      "type": "知識物件",
+      "owner": "霍格華茲圖書館",
+      "holder": null,
+      "location": "圖書館",
+      "state": {"shelf_status": "在架", "read_progress": "未讀", "condition": "完好", "restricted": true},
+      "verbs_from": "library-book"
+    },
+    "damp-almanac": {
+      "name": "受潮的舊年鑑（示例）",
+      "type": "知識物件",
+      "owner": "霍格華茲圖書館",
+      "holder": null,
+      "location": "圖書館",
+      "state": {"shelf_status": "在架", "read_progress": "未讀", "condition": "受潮", "restricted": false},
+      "verbs_from": "library-book"
+    },
+    "permission-slip": {
+      "name": "教授簽名的限制區許可（示例）",
+      "type": "知識物件",
+      "owner": "教授（示例 NPC）",
+      "holder": null,
+      "location": "教授辦公室",
+      "state": {"status": "未簽發"}
+    },
+    "quill": {
+      "name": "羽毛筆",
+      "type": "個人物品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "state": {"status": "完好"}
+    },
+    "parchment": {
+      "name": "羊皮紙",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 1,
+      "state": {"status": "可用"}
+    }
+  },
+  "steps": [
+    {"turn": 1, "actor": "player", "verb": "借閱", "target": "restricted-tome",
+     "expect": {"outcome": "blocked", "reason_contains": "教授簽名", "clock": "1991-10-10 19:00",
+                "objects": {"restricted-tome": {"holder": null, "location": "圖書館", "state": {"shelf_status": "在架"}}}}},
+    {"turn": 1, "actor": "player", "verb": "做筆記", "target": "charm-reference",
+     "expect": {"outcome": "blocked", "reason_contains": "先翻閱", "objects": {"parchment": {"quantity": 1}}}},
+    {"turn": 1, "actor": "player", "verb": "借閱", "target": "charm-reference",
+     "expect": {"outcome": "success", "clock": "1991-10-10 19:05", "events_contain": ["借閱登記"],
+                "objects": {"charm-reference": {"holder": "player", "location": null, "state": {"shelf_status": "借出"}}}}},
+    {"turn": 1, "actor": "player", "verb": "借閱", "target": "charm-reference",
+     "expect": {"outcome": "blocked", "reason_contains": "不在架上"}},
+    {"turn": 2, "actor": "player", "move_to": "交誼廳", "minutes": 15,
+     "expect": {"outcome": "moved", "clock": "1991-10-10 19:20", "actors": {"player": {"location": "交誼廳"}}}},
+    {"turn": 2, "actor": "player", "verb": "翻閱", "target": "charm-reference",
+     "expect": {"outcome": "success", "clock": "1991-10-10 19:50",
+                "objects": {"charm-reference": {"state": {"read_progress": "已翻閱"}}}}},
+    {"turn": 2, "actor": "player", "verb": "做筆記", "target": "charm-reference",
+     "expect": {"outcome": "success", "clock": "1991-10-10 20:20",
+                "objects": {"charm-reference": {"state": {"read_progress": "已做筆記"}},
+                            "parchment": {"quantity": 0, "state": {"status": "耗盡"}}}}},
+    {"turn": 2, "actor": "player", "verb": "做筆記", "target": "charm-reference",
+     "expect": {"outcome": "blocked", "reason_contains": "需要羊皮紙", "objects": {"parchment": {"quantity": 0}}}},
+    {"turn": 3, "actor": "player", "verb": "歸還", "target": "charm-reference",
+     "expect": {"outcome": "blocked", "reason_contains": "回到圖書館",
+                "objects": {"charm-reference": {"holder": "player", "state": {"shelf_status": "借出"}}}}},
+    {"turn": 3, "actor": "player", "move_to": "圖書館", "minutes": 15,
+     "expect": {"outcome": "moved", "clock": "1991-10-10 20:35"}},
+    {"turn": 3, "actor": "player", "verb": "歸還", "target": "charm-reference",
+     "expect": {"outcome": "success", "clock": "1991-10-10 20:38", "events_contain": ["歸還登記"],
+                "objects": {"charm-reference": {"holder": null, "location": "圖書館",
+                                                "state": {"shelf_status": "在架", "read_progress": "已做筆記"}}}}},
+    {"turn": 4, "actor": "player", "verb": "翻閱", "target": "damp-almanac",
+     "expect": {"outcome": "partial", "reason_contains": "受潮", "clock": "1991-10-10 20:58",
+                "objects": {"damp-almanac": {"location": "圖書館", "state": {"read_progress": "已翻閱", "condition": "受潮"}}}}}
+  ]
+}

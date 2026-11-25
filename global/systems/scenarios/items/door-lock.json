@@ -1,0 +1,148 @@
+{
+  "id": "ITEM-DOOR-001",
+  "kind": "door",
+  "title": "上鎖的空教室門：鑰匙、Alohomora 與有防護的門",
+  "description": "系統測試情境，非新增正典事實。驗證門的開關／上鎖狀態機、鑰匙與咒語兩種解鎖路徑、不同防護不保證能被同一咒語破解，以及狀態跨回合保留。",
+  "rules": ["二、物件資料欄位", "四、互動判定", "五、物件狀態與連鎖互動", "八、霍格華茲互動範例", "十、互動驗收"],
+  "start_time": "1991-10-03 20:00",
+  "actors": {
+    "player": {"name": "玩家角色", "location": "三樓走廊", "knows": []},
+    "classmate": {"name": "同學（示例 NPC）", "location": "三樓走廊", "knows": ["Alohomora"]}
+  },
+  "verb_templates": {
+    "locked-door": {
+      "打開": {
+        "canonical": "打開",
+        "requires": [
+          {"state": "locked", "equals": false, "reason": "門上鎖，無法直接打開"},
+          {"state": "open", "equals": false, "reason": "門已經是開的"}
+        ],
+        "branches": [{"outcome": "success", "minutes": 0, "effects": [{"set": {"open": true}}]}]
+      },
+      "關閉": {
+        "canonical": "關閉",
+        "requires": [{"state": "open", "equals": true, "reason": "門已經關著"}],
+        "branches": [{"outcome": "success", "minutes": 0, "effects": [{"set": {"open": false}}]}]
+      },
+      "使用 Alohomora": {
+        "canonical": "使用 Alohomora",
+        "requires": [
+          {"actor_knows": "Alohomora", "reason": "角色不會開鎖咒（Alohomora）"},
+          {"state": "locked", "equals": true, "reason": "門沒有上鎖"}
+        ],
+        "branches": [
+          {"id": "protected", "when": [{"state": "protection", "equals": "防開鎖咒"}], "outcome": "failure", "minutes": 1,
+           "note": "此門的防護使 Alohomora 無效",
+           "effects": [{"event": "咒語被門上的防護彈開，留下魔法殘留"}]},
+          {"id": "opened-by-charm", "outcome": "success", "minutes": 1,
+           "effects": [{"set": {"locked": false}}, {"event": "Alohomora 解開門鎖，留下微弱魔法殘留"}]}
+        ]
+      }
+    }
+  },
+  "objects": {
+    "classroom-door": {
+      "name": "三樓空教室門",
+      "type": "互動環境",
+      "owner": "霍格華茲",
+      "holder": null,
+      "location": "三樓走廊",
+      "state": {"open": false, "locked": true, "protection": "無", "condition": "完好"},
+      "verbs_from": "locked-door",
+      "verbs": {
+        "解鎖": {
+          "canonical": "解鎖",
+          "requires": [
+            {"state": "locked", "equals": true, "reason": "門沒有上鎖"},
+            {"actor_holds": "classroom-key", "reason": "需要這扇門的鑰匙（或改用開鎖咒 Alohomora）"}
+          ],
+          "branches": [{"outcome": "success", "minutes": 1,
+                        "effects": [{"set": {"locked": false}}, {"event": "鑰匙轉動，發出清脆聲響"}]}]
+        },
+        "鎖上": {
+          "canonical": "鎖上",
+          "requires": [
+            {"state": "open", "equals": false, "reason": "門開著，無法上鎖"},
+            {"state": "locked", "equals": false, "reason": "門已經上鎖"},
+            {"actor_holds": "classroom-key", "reason": "需要鑰匙才能鎖上"}
+          ],
+          "branches": [{"outcome": "success", "minutes": 1, "effects": [{"set": {"locked": true}}]}]
+        }
+      }
+    },
+    "storeroom-door": {
+      "name": "有防護的儲藏室門",
+      "type": "互動環境",
+      "owner": "霍格華茲",
+      "holder": null,
+      "location": "三樓走廊",
+      "state": {"open": false, "locked": true, "protection": "防開鎖咒", "condition": "完好"},
+      "verbs_from": "locked-door"
+    },
+    "classroom-key": {
+      "name": "空教室鑰匙",
+      "type": "工具與裝備",
+      "owner": "管理員（示例 NPC）",
+      "holder": null,
+      "location": "三樓走廊",
+      "quantity": 1,
+      "state": {"status": "完好"},
+      "verbs": {
+        "拿取": {
+          "canonical": "拿取",
+          "requires": [{"holder": null, "reason": "鑰匙已經在某人手上"}],
+          "branches": [{"outcome": "success", "minutes": 1, "effects": [{"take": "$actor"}]}]
+        },
+        "放下": {
+          "canonical": "放下",
+          "requires": [{"holder": "$actor", "reason": "鑰匙不在你手上"}],
+          "branches": [{"outcome": "success", "minutes": 0, "effects": [{"place": "$here"}]}]
+        }
+      }
+    }
+  },
+  "steps": [
+    {"turn": 1, "actor": "player", "verb": "打開", "target": "classroom-door",
+     "expect": {"outcome": "blocked", "reason_contains": "門上鎖", "clock": "1991-10-03 20:00",
+                "objects": {"classroom-door": {"state": {"open": false, "locked": true}}}}},
+    {"turn": 1, "actor": "player", "verb": "解鎖", "target": "classroom-door",
+     "expect": {"outcome": "blocked", "reason_contains": "需要這扇門的鑰匙",
+                "objects": {"classroom-door": {"state": {"locked": true}}}}},
+    {"turn": 1, "actor": "player", "verb": "使用 Alohomora", "target": "classroom-door",
+     "expect": {"outcome": "blocked", "reason_contains": "不會開鎖咒",
+                "objects": {"classroom-door": {"state": {"locked": true}}}}},
+    {"turn": 1, "actor": "classmate", "verb": "使用 Alohomora", "target": "storeroom-door",
+     "expect": {"outcome": "failure", "reason_contains": "防護", "clock": "1991-10-03 20:01",
+                "events_contain": ["魔法殘留"],
+                "objects": {"storeroom-door": {"state": {"locked": true, "open": false}}}}},
+    {"turn": 2, "actor": "player", "verb": "拿取", "target": "classroom-key",
+     "expect": {"outcome": "success", "clock": "1991-10-03 20:02",
+                "objects": {"classroom-key": {"holder": "player", "location": null}}}},
+    {"turn": 2, "actor": "classmate", "verb": "拿取", "target": "classroom-key",
+     "expect": {"outcome": "blocked", "reason_contains": "可接觸範圍",
+                "objects": {"classroom-key": {"holder": "player"}}}},
+    {"turn": 2, "actor": "player", "verb": "解鎖", "target": "classroom-door",
+     "expect": {"outcome": "success", "clock": "1991-10-03 20:03", "events_contain": ["鑰匙轉動"],
+                "objects": {"classroom-door": {"state": {"locked": false, "open": false}}}}},
+    {"turn": 2, "actor": "player", "verb": "打開", "target": "classroom-door",
+     "expect": {"outcome": "success", "objects": {"classroom-door": {"state": {"open": true}}}}},
+    {"turn": 3, "actor": "player", "verb": "鎖上", "target": "classroom-door",
+     "expect": {"outcome": "blocked", "reason_contains": "門開著",
+                "objects": {"classroom-door": {"state": {"open": true, "locked": false}}}}},
+    {"turn": 3, "actor": "player", "verb": "關閉", "target": "classroom-door",
+     "expect": {"outcome": "success", "objects": {"classroom-door": {"state": {"open": false, "locked": false}}}}},
+    {"turn": 3, "actor": "player", "verb": "鎖上", "target": "classroom-door",
+     "expect": {"outcome": "success", "clock": "1991-10-03 20:04",
+                "objects": {"classroom-door": {"state": {"open": false, "locked": true}}}}},
+    {"turn": 4, "actor": "player", "verb": "放下", "target": "classroom-key",
+     "expect": {"outcome": "success",
+                "objects": {"classroom-key": {"holder": null, "location": "三樓走廊"}}}},
+    {"turn": 4, "actor": "classmate", "verb": "使用 Alohomora", "target": "classroom-door",
+     "expect": {"outcome": "success", "clock": "1991-10-03 20:05", "events_contain": ["Alohomora 解開門鎖"],
+                "objects": {"classroom-door": {"state": {"locked": false}},
+                            "storeroom-door": {"state": {"locked": true}}}}},
+    {"turn": 4, "actor": "classmate", "verb": "破壞", "target": "storeroom-door",
+     "expect": {"outcome": "blocked", "reason_contains": "沒有這種互動方式",
+                "objects": {"storeroom-door": {"state": {"condition": "完好", "locked": true}}}}}
+  ]
+}

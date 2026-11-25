@@ -1,0 +1,107 @@
+{
+  "id": "ITEM-PET-001",
+  "kind": "pet",
+  "title": "寵物貓頭鷹：飢餓、信任、偏好、訓練與時間推移",
+  "description": "系統測試情境，非新增正典事實；數值為模擬器抽象尺度。驗證寵物不是道具按鈕：太餓時不配合訓練、不吃不合適的食物、餵食會扣除零食數量，且飢餓度會隨時間回升並跨回合影響互動。",
+  "rules": ["一、物件類型", "四、互動判定", "五、物件狀態與連鎖互動", "八、霍格華茲互動範例", "十、互動驗收"],
+  "start_time": "1991-10-31 07:00",
+  "actors": {
+    "player": {"name": "玩家角色", "location": "宿舍", "knows": []}
+  },
+  "objects": {
+    "owl": {
+      "name": "寵物貓頭鷹（示例）",
+      "type": "生物與半自主物件",
+      "owner": "player",
+      "holder": null,
+      "location": "宿舍",
+      "state": {"hunger": 70, "trust": 40, "health": "良好", "tricks": 0},
+      "verbs": {
+        "訓練": {
+          "canonical": "訓練",
+          "branches": [
+            {"id": "too-hungry", "when": [{"state": "hunger", "gte": 60}], "outcome": "failure", "minutes": 10,
+             "note": "貓頭鷹太餓，不配合訓練",
+             "effects": [{"increment": {"trust": -5}}, {"event": "貓頭鷹餓得焦躁，啄了一下手指"}]},
+            {"id": "low-trust", "when": [{"state": "trust", "lt": 30}], "outcome": "failure", "minutes": 10,
+             "note": "貓頭鷹對你還不夠信任", "effects": []},
+            {"id": "trained", "outcome": "success", "minutes": 20,
+             "effects": [{"increment": {"tricks": 1, "trust": 5, "hunger": 10}}, {"event": "貓頭鷹學會在指令下停到手臂上"}]}
+          ]
+        },
+        "餵零食": {
+          "canonical": "餵食",
+          "requires": [{"actor_holds": "owl-treats", "reason": "身上沒有貓頭鷹零食"}],
+          "branches": [{"outcome": "success", "minutes": 2,
+                        "effects": [{"consume": 1, "object": "owl-treats"},
+                                    {"set": {"hunger": 0}}, {"increment": {"trust": 10}},
+                                    {"schedule": {"after": 480, "label": "再次飢餓",
+                                                  "effects": [{"set": {"hunger": 60}}, {"event": "貓頭鷹又餓了"}]}}]}]
+        },
+        "餵巧克力蛙": {
+          "canonical": "餵食",
+          "requires": [{"actor_holds": "chocolate-frog", "reason": "身上沒有巧克力蛙"}],
+          "branches": [{"outcome": "failure", "minutes": 1, "note": "貓頭鷹嗅了嗅就別過頭，不吃這種食物", "effects": []}]
+        },
+        "觀察健康": {
+          "canonical": "觀察健康",
+          "branches": [{"outcome": "success", "minutes": 5, "effects": [{"event": "觀察健康：羽毛整齊、精神良好"}]}]
+        }
+      }
+    },
+    "owl-treats": {
+      "name": "貓頭鷹零食",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 1,
+      "state": {"status": "可用"}
+    },
+    "chocolate-frog": {
+      "name": "巧克力蛙",
+      "type": "消耗品",
+      "owner": "player",
+      "holder": "player",
+      "location": null,
+      "quantity": 1,
+      "state": {"status": "可用"}
+    }
+  },
+  "steps": [
+    {"turn": 1, "actor": "player", "verb": "訓練", "target": "owl",
+     "expect": {"outcome": "failure", "reason_contains": "太餓", "clock": "1991-10-31 07:10",
+                "objects": {"owl": {"state": {"hunger": 70, "trust": 35, "tricks": 0}}}}},
+    {"turn": 1, "actor": "player", "verb": "餵巧克力蛙", "target": "owl",
+     "expect": {"outcome": "failure", "reason_contains": "不吃",
+                "objects": {"owl": {"state": {"hunger": 70}}, "chocolate-frog": {"quantity": 1}}}},
+    {"turn": 1, "actor": "player", "verb": "餵零食", "target": "owl",
+     "expect": {"outcome": "success", "clock": "1991-10-31 07:13",
+                "objects": {"owl": {"state": {"hunger": 0, "trust": 45}},
+                            "owl-treats": {"quantity": 0, "state": {"status": "耗盡"}}}}},
+    {"turn": 1, "actor": "player", "verb": "餵零食", "target": "owl",
+     "expect": {"outcome": "blocked", "reason_contains": "沒有貓頭鷹零食",
+                "objects": {"owl": {"state": {"hunger": 0, "trust": 45}}}}},
+    {"turn": 2, "actor": "player", "verb": "訓練", "target": "owl",
+     "expect": {"outcome": "success", "clock": "1991-10-31 07:33",
+                "objects": {"owl": {"state": {"tricks": 1, "trust": 50, "hunger": 10}}}}},
+    {"turn": 3, "actor": "player", "move_to": "變形學教室", "minutes": 10,
+     "expect": {"outcome": "moved", "clock": "1991-10-31 07:43"}},
+    {"turn": 3, "actor": "player", "verb": "觀察健康", "target": "owl",
+     "expect": {"outcome": "blocked", "reason_contains": "可接觸範圍",
+                "objects": {"owl": {"location": "宿舍"}}}},
+    {"turn": 4, "wait": 449,
+     "expect": {"outcome": "waited", "clock": "1991-10-31 15:12",
+                "objects": {"owl": {"state": {"hunger": 10}}}}},
+    {"turn": 4, "wait": 1,
+     "expect": {"outcome": "waited", "clock": "1991-10-31 15:13", "events_contain": ["貓頭鷹又餓了"],
+                "objects": {"owl": {"state": {"hunger": 60, "trust": 50, "tricks": 1}}}}},
+    {"turn": 5, "actor": "player", "move_to": "宿舍", "minutes": 10,
+     "expect": {"outcome": "moved", "clock": "1991-10-31 15:23"}},
+    {"turn": 5, "actor": "player", "verb": "觀察健康", "target": "owl",
+     "expect": {"outcome": "success", "events_contain": ["觀察健康"]}},
+    {"turn": 5, "actor": "player", "verb": "訓練", "target": "owl",
+     "expect": {"outcome": "failure", "reason_contains": "太餓",
+                "objects": {"owl": {"state": {"hunger": 60, "trust": 45, "tricks": 1}}}}}
+  ]
+}
