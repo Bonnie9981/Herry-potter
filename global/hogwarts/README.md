@@ -8,6 +8,7 @@
 - [1991-1992 學生人物索引](students-1991.md)
 - [幽靈、肖像與城堡居民](ghosts-and-portraits.md)
 - [創辦人與重要校園物件](founders-and-artifacts.md)
+- [原著學年事件基準線](canon-school-timeline.md)
 - [課程與年級安排](curriculum.md)
 - [各科目百科](../academics/subjects/README.md)
 - [課表與課堂運作](timetable-and-lessons.md)
