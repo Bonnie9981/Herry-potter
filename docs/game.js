@@ -26,10 +26,29 @@ function render(){
 const p=places.find(x=>x.id===state.location);$("#place-floor").textContent=p.floor;$("#place-desc").textContent=p.desc;$("#scene-title").textContent=p.name;
 $("#scene-art").src=state.location==="library"?"./assets/art-direction/霍格華茲圖書館奇遇-2.png":"";$("#scene-art").style.display=state.location==="library"?"block":"none";$("#scene").dataset.location=state.location;
 $("#hotspots").replaceChildren();
-(things[state.location]||[]).forEach((o,i)=>{const b=document.createElement("button");b.className="hotspot";b.textContent=(o[2]==="人物"?"♟ ":"✧ ")+o[1];b.style.left=(o[5]||[28,52,73,43][i%4])+"%";b.style.top=(o[6]||[42,58,40,76][i%4])+"%";b.addEventListener("click",()=>target(o));$("#hotspots").append(b)});
+(things[state.location]||[]).forEach((o,i)=>{const b=document.createElement("button");b.className="hotspot";b.textContent=(o[2]==="人物"?"♟ ":"✧ ")+o[1];b.style.left=(o[5]||[28,52,73,43][i%4])+"%";b.style.top=(o[6]||[42,58,40,76][i%4])+"%";b.addEventListener("click",()=>approachOrTarget(o,b));$("#hotspots").append(b)});
 $("#location-list").replaceChildren();places.forEach(x=>{const b=document.createElement("button");b.className="location-option"+(x.id===state.location?" current":"");b.disabled=!x.open;b.innerHTML="<span>"+x.icon+"</span><span><b>"+x.name+"</b><small>"+x.floor+(x.open?"":" · 尚未開放")+"</small></span>";b.addEventListener("click",()=>travel(x.id));$("#location-list").append(b)});
 $("#inventory-count").textContent=state.inventory.length;$("#inventory").textContent=state.inventory.join("、");$("#quest-status").textContent=state.questDone?"已完成":"進行中";$("#quest-progress").textContent=state.questDone?"你找到了夾在古書裡的紙條。":"找到古書裡夾著的紙條。";tick(0)}
 function travel(id){const p=places.find(x=>x.id===id);if(!p||!p.open)return;state.location=id;closePanels();$("#target-card").hidden=true;tick(3);say("你前往了"+p.name+"。"+p.desc);render()}
+function approachOrTarget(o,button){
+ const sceneRect=scene.getBoundingClientRect(),r=button.getBoundingClientRect();
+ const tx=(r.left+r.width/2-sceneRect.left)/sceneRect.width*100;
+ const ty=(r.top+r.height/2-sceneRect.top)/sceneRect.height*100;
+ const dx=tx-state.playerX,dy=ty-state.playerY;
+ const distance=Math.hypot(dx,dy);
+ if(distance>19){
+  state.playerX=Math.max(5,Math.min(95,tx-(dx/Math.max(distance,1))*7));
+  state.playerY=Math.max(43,Math.min(91,ty-(dy/Math.max(distance,1))*7));
+  if(Math.abs(dx)>1)state.facing=dx<0?0:180;
+  placePlayer();player.classList.add("walking");
+  window.clearTimeout(player._walkTimer);
+  player._walkTimer=window.setTimeout(()=>player.classList.remove("walking"),420);
+  tick(Math.max(1,Math.round(distance/5)));
+  say("你走近了「"+o[1]+"」。再點一次即可互動。");
+  return;
+ }
+ target(o);
+}
 function target(o){$("#target-kind").textContent=o[2];$("#target-name").textContent=o[1];$("#target-desc").textContent=o[4];$("#target-actions").replaceChildren();o[3].split(",").forEach(action=>{const b=document.createElement("button");b.textContent=action;b.addEventListener("click",()=>act(o,action));$("#target-actions").append(b)});$("#target-card").hidden=false}
 function act(o,a){let t=o[4];if(o[0]==="book"&&a==="閱讀"){state.questDone=true;if(!state.inventory.includes("折起來的羊皮紙"))state.inventory.push("折起來的羊皮紙");t="你翻開古書，發現一張折起來的羊皮紙。上面寫著：「別在鐘聲響起後走東側樓梯。」"}else if(a==="交談")t="對方停下手邊的事，抬頭看向你：「嗯？有什麼事嗎？」";else if(a==="休息")t="你找了個安靜的位置休息片刻。疲勞稍微緩和了。";else if(a==="觀察")t+=" 你暫時沒有打擾對方。";else t+=" 你花了一點時間完成「"+a+"」。";tick(a==="休息"?15:5);say(t);$("#target-card").hidden=true;render()}
 $("#enter").addEventListener("click",()=>$("#intro").hidden=true);$("#map-button").addEventListener("click",()=>$("#map-modal").hidden=false);$("#bag-button").addEventListener("click",()=>{closePanels();$("#panel-bag").hidden=false});$("#quest-button").addEventListener("click",()=>{closePanels();$("#panel-quest").hidden=false});
