@@ -1,7 +1,6 @@
 name: 主持者反思／模擬品質回報
 description: 回報主持過程中的判定錯誤、狀態矛盾、NPC 行為或存檔問題
 title: "[反思] "
-labels: ["reflection", "needs-triage"]
 body:
   - type: dropdown
     id: category
