@@ -34,5 +34,42 @@ function target(o){$("#target-kind").textContent=o[2];$("#target-name").textCont
 function act(o,a){let t=o[4];if(o[0]==="book"&&a==="閱讀"){state.questDone=true;if(!state.inventory.includes("折起來的羊皮紙"))state.inventory.push("折起來的羊皮紙");t="你翻開古書，發現一張折起來的羊皮紙。上面寫著：「別在鐘聲響起後走東側樓梯。」"}else if(a==="交談")t="對方停下手邊的事，抬頭看向你：「嗯？有什麼事嗎？」";else if(a==="休息")t="你找了個安靜的位置休息片刻。疲勞稍微緩和了。";else if(a==="觀察")t+=" 你暫時沒有打擾對方。";else t+=" 你花了一點時間完成「"+a+"」。";tick(a==="休息"?15:5);say(t);$("#target-card").hidden=true;render()}
 $("#enter").addEventListener("click",()=>$("#intro").hidden=true);$("#map-button").addEventListener("click",()=>$("#map-modal").hidden=false);$("#bag-button").addEventListener("click",()=>{closePanels();$("#panel-bag").hidden=false});$("#quest-button").addEventListener("click",()=>{closePanels();$("#panel-quest").hidden=false});
 $("#close-target").addEventListener("click",()=>$("#target-card").hidden=true);$("#close-map").addEventListener("click",()=>$("#map-modal").hidden=true);$(".close-panel").forEach(b=>b.addEventListener("click",e=>e.currentTarget.closest(".panel").hidden=true));
-$("#save-button").addEventListener("click",()=>{localStorage.setItem("hogwarts-save-v1",JSON.stringify(state));say("進度已儲存在這台裝置。")});$("#load-button").addEventListener("click",()=>{const v=localStorage.getItem("hogwarts-save-v1");if(!v){say("找不到存檔。");return}Object.assign(state,JSON.parse(v));render();say("已載入上次進度。")});render();
+$("#save-button").addEventListener("click",()=>{localStorage.setItem("hogwarts-save-v1",JSON.stringify(state));say("進度已儲存在這台裝置。")});$("#load-button").addEventListener("click",()=>{try{const v=localStorage.getItem("hogwarts-save-v1");if(!v){say("找不到存檔。");return}const data=JSON.parse(v);if(!data||!places.some(p=>p.id===data.location)||!Array.isArray(data.inventory))throw new Error("invalid save");Object.assign(state,data);render();say("已載入上次進度。")}catch(e){say("存檔讀取失敗，資料可能已損壞。")}});
+
+// 玩家角色：點擊地面移動，方向鍵／WASD 行走。
+const player=$("#player"), playerBody=$("#player-body"), scene=$("#scene");
+state.playerX=Number.isFinite(state.playerX)?state.playerX:50;
+state.playerY=Number.isFinite(state.playerY)?state.playerY:76;
+state.facing=Number.isFinite(state.facing)?state.facing:180;
+function placePlayer(){player.style.left=state.playerX+"%";player.style.top=state.playerY+"%";playerBody.style.transform="rotateY("+state.facing+"deg)"}
+function movePlayer(dx,dy){
+ const oldX=state.playerX, oldY=state.playerY;
+ state.playerX=Math.max(5,Math.min(95,state.playerX+dx));
+ state.playerY=Math.max(43,Math.min(91,state.playerY+dy));
+ if(Math.abs(state.playerX-oldX)>.05)state.facing=state.playerX<oldX?0:180;
+ placePlayer();player.classList.add("walking");
+ window.clearTimeout(player._walkTimer);player._walkTimer=window.setTimeout(()=>player.classList.remove("walking"),210);
+}
+scene.addEventListener("click",e=>{
+ if(e.target.closest(".hotspot")||e.target.closest("#player"))return;
+ const r=scene.getBoundingClientRect();
+ const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;
+ const dx=Math.max(-45,Math.min(45,x-state.playerX));
+ const dy=Math.max(-25,Math.min(25,y-state.playerY));
+ state.playerX=Math.max(5,Math.min(95,x));state.playerY=Math.max(43,Math.min(91,y));
+ if(Math.abs(dx)>1)state.facing=dx<0?0:180;
+ placePlayer();player.classList.add("walking");
+ window.clearTimeout(player._walkTimer);player._walkTimer=window.setTimeout(()=>player.classList.remove("walking"),420);
+ tick(Math.max(1,Math.round(Math.hypot(dx,dy)/5)));say("你走到了新的位置。");
+});
+const heldKeys=new Set();let keyLoop=null;
+function keyMove(){let dx=0,dy=0;if(heldKeys.has("ArrowLeft")||heldKeys.has("a"))dx-=1;if(heldKeys.has("ArrowRight")||heldKeys.has("d"))dx+=1;if(heldKeys.has("ArrowUp")||heldKeys.has("w"))dy-=1;if(heldKeys.has("ArrowDown")||heldKeys.has("s"))dy+=1;if(dx||dy){const n=Math.hypot(dx,dy);movePlayer(dx/n*1.25,dy/n*1.25)}}
+document.addEventListener("keydown",e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","w","a","s","d"].includes(k)){e.preventDefault();heldKeys.add(k);if(!keyLoop)keyLoop=window.setInterval(keyMove,45)}});
+document.addEventListener("keyup",e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;heldKeys.delete(k);if(!heldKeys.size&&keyLoop){window.clearInterval(keyLoop);keyLoop=null;player.classList.remove("walking")}});
+window.addEventListener("blur",()=>{heldKeys.clear();if(keyLoop){window.clearInterval(keyLoop);keyLoop=null}player.classList.remove("walking")});
+const originalSave=$("#save-button").onclick;
+$("#save-button").addEventListener("click",()=>{try{localStorage.setItem("hogwarts-save-v1",JSON.stringify(state))}catch(e){say("無法儲存：瀏覽器儲存空間不可用。")}});
+const originalRender=render;
+const renderWithPlayer=()=>{originalRender();placePlayer()};
+renderWithPlayer();
 })();
