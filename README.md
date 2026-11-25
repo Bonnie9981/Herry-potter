@@ -8,6 +8,7 @@
 
 ## 開發與品質管理
 - [開發 Progress](docs/開發Progress.md)
+- [霍格華茲資料庫完整度稽核](docs/霍格華茲資料庫完整度稽核.md)
 - [主持者自我反思與修正流程](docs/自我反思與修正流程.md)
 - [每回合檢查清單](docs/模擬回合檢查清單.md)
 - [玩家回報與改善說明](docs/玩家回報與改善.md)
@@ -24,6 +25,8 @@
 - [模擬總目錄](simulations/README.md)
 - [SIMULATION 001｜洛夏](simulations/SIM-001/README.md)
 - [高自由度模擬引擎](global/systems/simulation-engine.md)
+- [角色數值與成長系統](global/systems/character-state-and-progression.md)
+- [道具互動系統](global/systems/item-and-world-interaction.md)
 - [紅隊與玩家品鑑報告](docs/高自由度模擬器紅隊與玩家品鑑.md)
 - [完整遊戲主持指令](docs/霍格華茲模擬器完整指令.md)
 
