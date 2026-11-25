@@ -31,3 +31,10 @@
 - global/creatures/、plants/、objects/：生物、植物與物品百科。
 - global/systems/：能力、施法、魔藥與高自由度模擬引擎。
 - simulations/：每次獨立模擬。
+
+## 玩家回報與自動品質檢查
+- [玩家回報與改善說明](docs/玩家回報與改善.md)
+- [提交錯誤或新功能建議](https://github.com/Bonnie9981/Herry-potter/issues/new/choose)
+- `scripts/validate_world.py`：檢查全域資料隔離、天賦數值及存檔結構。
+- `.github/workflows/world-quality.yml`：每次相關資料變更時自動執行 QA；不呼叫 AI API。
+- `.github/workflows/pages.yml`：檢查入口網站並部署 GitHub Pages。
