@@ -1,0 +1,108 @@
+name: Hogwarts Portal - Validate & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hogwarts-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate public portal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check required portal files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s docs/index.html
+          test -s docs/玩家使用指南.md
+          test -f docs/.nojekyll
+          grep -q '霍格華茲人生模擬器' docs/index.html
+          grep -q 'function makePrompt' docs/index.html
+          grep -q '匯入角色 JSON' docs/index.html
+          echo "Portal files and required features are present."
+
+      - name: Validate HTML structure
+        shell: python
+        run: |
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class PortalParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.errors = []
+                  self.stack = []
+                  self.void = {"area", "base", "br", "col", "embed", "hr", "img",
+                               "input", "link", "meta", "param", "source", "track", "wbr"}
+
+              def handle_starttag(self, tag, attrs):
+                  if tag not in self.void:
+                      self.stack.append(tag)
+
+              def handle_endtag(self, tag):
+                  if tag in self.void:
+                      return
+                  if tag not in self.stack:
+                      self.errors.append(f"Unexpected closing tag: </{tag}>")
+                  else:
+                      while self.stack:
+                          current = self.stack.pop()
+                          if current == tag:
+                              break
+
+          source = Path("docs/index.html").read_text(encoding="utf-8")
+          parser = PortalParser()
+          parser.feed(source)
+          parser.close()
+          if parser.errors:
+              raise SystemExit("\\n".join(parser.errors))
+          if parser.stack:
+              raise SystemExit("Unclosed tags: " + ", ".join(parser.stack))
+          print("HTML parser check passed.")
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
