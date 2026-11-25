@@ -51,6 +51,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check docs/game.js
+          node --check docs/js/npcs.js
+          node --test tests/npcs.test.mjs
           python - <<'PY'
           import re
           from html.parser import HTMLParser

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NPC 日程預覽</title>
+<style>
+:root{--gold:#d8b779;--cream:#f4e7cf;--panel:#211914ee}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#17120f;color:var(--cream);font:14px/1.6 system-ui,"Noto Sans TC",sans-serif;overflow:hidden}
+#view{position:fixed;inset:0}
+.bar{position:fixed;z-index:2;left:12px;right:12px;top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;background:var(--panel);border:1px solid #b9945d88;border-radius:10px}
+.bar b{color:var(--gold)}button,select{font:inherit;color:inherit;background:#33251d;border:1px solid #b9945d;border-radius:7px;padding:6px 10px;cursor:pointer}
+#clock{min-width:150px}
+#side{position:fixed;z-index:2;right:12px;top:78px;width:min(320px,calc(100vw - 24px));max-height:calc(100vh - 100px);overflow:auto;padding:12px;background:var(--panel);border:1px solid #b9945d88;border-radius:10px}
+#side h3{margin:4px 0;color:var(--gold);font-weight:500}.row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #ffffff12;padding:4px 0;cursor:pointer}.row small{color:#c9b28f}
+#talk{position:fixed;z-index:3;left:50%;bottom:16px;transform:translateX(-50%);width:min(560px,94vw);padding:14px 16px;background:var(--panel);border:1px solid var(--gold);border-radius:10px}
+#talk h4{margin:0 0 4px;color:var(--gold);font-weight:500}#talk .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#log{font-size:12px;color:#d9c7a8}
+.tag{position:fixed;z-index:1;transform:translate(-50%,-100%);padding:1px 7px;border-radius:6px;background:#211914cc;border:1px solid #b9945d66;font-size:12px;white-space:nowrap;pointer-events:none}
+[hidden]{display:none!important}
+@media(max-width:680px){#side{top:auto;bottom:12px;max-height:38vh}}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div class="bar">
+  <b>NPC 日程預覽</b>
+  <select id="scene"></select>
+  <span id="clock"></span>
+  <button data-speed="0">暫停</button><button data-speed="1">1 分/秒</button><button data-speed="10">10 分/秒</button>
+  <button id="plus30">+30 分</button><button id="nextday">下一天</button>
+</div>
+<aside id="side"><h3>這裡的人</h3><div id="here"></div><h3>全校 NPC 位置</h3><div id="all"></div><h3>事件</h3><div id="log"></div></aside>
+<section id="talk" hidden><h4 id="talk-name"></h4><div id="talk-text"></div><small id="talk-rel"></small><div class="opts" id="talk-opts"></div></section>
+<script type="module">
+import * as THREE from "three";
+import { PaperCharacter } from "./js/sprites.js";
+import { NPCS, NpcDirector, SCENE_NAMES, REQUIRED_SPOTS, fmt, dayOfWeek } from "./js/npcs.js";
+
+// 預覽用的簡易場景：20×14 公尺地板，具名位置排成格狀，出口在牆邊。
+// 正式場景由引擎載入；這頁只用來檢查 NPC 日程、移動與對話。
+const W = 20, D = 14, YAW = 0.62;
+const EXITS = { library: [19.5, 7], hall: [10, 13.5], courtyard: [0.5, 7], corridor: [10, 0.5], classroom: [19.5, 1], greenhouse: [0.5, 13.5], grounds: [10, 13.5] };
+const $ = s => document.querySelector(s);
+const canvas = $("#view");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.shadowMap.enabled = true;
+const scene3 = new THREE.Scene();
+scene3.background = new THREE.Color(0x2a2019);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
+const target = new THREE.Vector3(W / 2, 0, D / 2);
+camera.position.set(target.x + Math.sin(YAW) * 21, 21, target.z + Math.cos(YAW) * 21);
+camera.lookAt(target);
+scene3.add(new THREE.HemisphereLight(0xffe2b8, 0x4a3426, 1.4));
+const sun = new THREE.DirectionalLight(0xffc890, 2.2); sun.position.set(14, 20, 6); sun.castShadow = true;
+Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 }); scene3.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.95 }));
+floor.rotation.x = -Math.PI / 2; floor.position.set(W / 2, 0, D / 2); floor.receiveShadow = true; scene3.add(floor);
+const marks = new THREE.Group(); scene3.add(marks);
+
+let sceneId = "library";
+const spotsOf = id => Object.fromEntries(REQUIRED_SPOTS[id].map((n, i) => [n, [3 + (i % 3) * 6.5, 3 + Math.floor(i / 3) * 6]]));
+const chars = new Set();
+const director = new NpcDirector({
+  camYaw: YAW,
+  spawnCharacter(look) { const c = new PaperCharacter(look); scene3.add(c.group); chars.add(c); return c; },
+  removeCharacter(c) { scene3.remove(c.group); chars.delete(c); },
+  findPath(from, to) { return [{ x: to.x, z: from.z }, { x: to.x, z: to.z }]; },
+  sceneSpot(name) { return spotsOf(sceneId)[name] || null; },
+  exitTo(id) { const e = EXITS[id]; return e && id !== sceneId ? e : null; },
+  notify(evt) { const p = document.createElement("div"); p.textContent = fmt(clock.minutes) + " " + evt.text; $("#log").prepend(p); },
+});
+
+const clock = { day: 1, minutes: 14 * 60 + 20 };
+let speed = 1;
+function buildMarks() {
+  marks.clear();
+  for (const [name, [x, z]] of Object.entries(spotsOf(sceneId))) {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(0.35, 20), new THREE.MeshBasicMaterial({ color: 0xd8b779, transparent: true, opacity: 0.35 }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, 0.01, z); m.userData.label = name; marks.add(m);
+  }
+  for (const [id, [x, z]] of Object.entries(EXITS)) {
+    if (id === sceneId) continue;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 1.2), new THREE.MeshBasicMaterial({ color: 0x5a7aa0 }));
+    m.position.set(x, 0.03, z); marks.add(m);
+  }
+}
+function enter(id) { sceneId = id; $("#scene").value = id; buildMarks(); director.enterScene(id, clock); closeTalk(); }
+for (const [id, name] of Object.entries(SCENE_NAMES)) $("#scene").add(new Option(name, id));
+$("#scene").addEventListener("change", e => enter(e.target.value));
+document.querySelectorAll("[data-speed]").forEach(b => b.addEventListener("click", () => speed = +b.dataset.speed));
+function advance(min) { clock.minutes += min; while (clock.minutes >= 1440) { clock.minutes -= 1440; clock.day++; } }
+$("#plus30").addEventListener("click", () => advance(30));
+$("#nextday").addEventListener("click", () => { clock.day++; clock.minutes = 7 * 60; enter(sceneId); });
+
+// 對話
+let talking = null;
+function showTalk(id, opt) {
+  const r = director.talk(id, { playerName: "你" }, opt);
+  advance(r.minutes || 0);
+  talking = id;
+  $("#talk").hidden = false; $("#talk-name").textContent = r.speaker; $("#talk-text").textContent = r.text;
+  $("#talk-rel").textContent = r.relationship ? `關係：${r.relationship.tierLabel}｜熟悉 ${r.relationship.familiarity}｜信任 ${r.relationship.trust}` + (r.effects.item ? `｜獲得：${r.effects.item}` : "") : "";
+  const box = $("#talk-opts"); box.replaceChildren();
+  for (const o of r.options) { const b = document.createElement("button"); b.textContent = o.label; b.onclick = () => o.id === "bye" ? closeTalk() : showTalk(id, o.id); box.append(b); }
+  if (!r.options.length) { const b = document.createElement("button"); b.textContent = "關閉"; b.onclick = closeTalk; box.append(b); }
+}
+function closeTalk() { talking = null; $("#talk").hidden = true; }
+
+const tags = new Map();
+function syncTags() {
+  const here = director.present();
+  for (const [id, el] of tags) if (!here.some(p => p.id === id)) { el.remove(); tags.delete(id); }
+  const v = new THREE.Vector3();
+  for (const p of here) {
+    let el = tags.get(p.id);
+    if (!el) { el = document.createElement("div"); el.className = "tag"; document.body.append(el); tags.set(p.id, el); }
+    v.set(p.x, 2.1, p.z).project(camera);
+    el.style.left = (v.x + 1) / 2 * innerWidth + "px"; el.style.top = (1 - v.y) / 2 * innerHeight + "px";
+    el.textContent = p.name.replace("Professor ", "") + "・" + (p.leaving ? "離開中" : p.activity);
+  }
+  const sig = JSON.stringify([here.map(p => [p.id, p.leaving, p.activity]), NPCS.map(n => director.where(n.id))]);
+  if (sig === syncTags.sig) return;
+  syncTags.sig = sig;
+  $("#here").replaceChildren(...here.map(p => {
+    const r = document.createElement("div"); r.className = "row";
+    r.innerHTML = `<span>${p.name}</span><small>${p.leaving ? "離開中" : p.activity}</small>`;
+    r.onclick = () => showTalk(p.id); return r;
+  }));
+  $("#all").replaceChildren(...NPCS.map(n => {
+    const w = director.where(n.id); const r = document.createElement("div"); r.className = "row";
+    r.innerHTML = `<span>${n.name}</span><small>${w.scene ? SCENE_NAMES[w.scene] + "・" + w.activity : w.label}</small>`;
+    r.onclick = () => w.scene && enter(w.scene); return r;
+  }));
+}
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+canvas.addEventListener("click", e => {
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects([...chars].map(c => c.mesh));
+  if (!hits.length) return;
+  const p = director.present().find(q => q.char && q.char.mesh === hits[0].object);
+  if (p) showTalk(p.id);
+});
+
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+let last = performance.now(), acc = 0;
+const WEEK = ["", "一", "二", "三", "四", "五", "六", "日"];
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (!talking) { acc += dt * speed; const whole = Math.floor(acc); if (whole) { advance(whole); acc -= whole; } }
+  director.update(dt, clock);
+  for (const c of chars) c.update(dt, YAW);
+  $("#clock").textContent = `第 ${clock.day} 天（星期${WEEK[dayOfWeek(clock.day)]}） ${fmt(clock.minutes)}`;
+  syncTags();
+  renderer.render(scene3, camera);
+  requestAnimationFrame(frame);
+}
+enter("library");
+window.__npc = { director, clock, enter, advance };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
