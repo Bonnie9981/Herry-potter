@@ -46,11 +46,19 @@ jobs:
           test -s docs/assets/art-direction/霍格華茲圖書館的魔法探索-1.png
           echo "Game entry and art reference assets are present."
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
       - name: Check game JavaScript syntax and DOM contract
         shell: bash
         run: |
           set -euo pipefail
+          node --version
           node --check docs/game.js
+          for f in docs/js/*.js docs/js/scenes/*.js; do node --check "$f"; done
+          node --test tests/*.test.mjs
           python - <<'PY'
           import re
           from html.parser import HTMLParser
@@ -66,7 +74,7 @@ jobs:
                       self.ids.add(value)
 
           html = Path("docs/index.html").read_text(encoding="utf-8")
-          js = Path("docs/game.js").read_text(encoding="utf-8")
+          js = "\n".join(p.read_text(encoding="utf-8") for p in [Path("docs/game.js"), *sorted(Path("docs/js").glob("*.js"))])
           parser = IDs()
           parser.feed(html)
           required = set(re.findall(r'\$\(["\']#([A-Za-z0-9_-]+)["\']\)', js))

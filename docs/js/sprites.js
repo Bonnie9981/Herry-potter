@@ -430,7 +430,7 @@ const wrap180 = (d) => { while (d > 180) d -= 360; while (d < -180) d += 360; re
 // 公開介面：.group、.walking、.face(screenDX, screenDY)、.update(dt, camYaw)、.addXray()
 //          .setState("idle"|"walk"|"interact")、.interact() → Promise、.state、.paperAngle（度）
 export class PaperCharacter {
-  constructor(key, { height = 1.85, thickness = 0.022 } = {}) {
+  constructor(key, { height = 2.3, thickness = 0.026 } = {}) {
     this.key = key;
     this.height = height;
     atlasCache.get(key) || buildAtlas(key);
@@ -445,15 +445,15 @@ export class PaperCharacter {
     geo.translate(0, yOff, 0);
     this.geo = geo;
     this.base = Float32Array.from(geo.attributes.position.array);
-    // 紙片永遠大致朝向鏡頭，若只靠場景光，背光時會整張變黑；用自發光保底，保留彩度與白色描邊
-    this.mat = new THREE.MeshStandardMaterial({ map: this.tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0xffffff, emissiveMap: this.tex, emissiveIntensity: 0.5 });
+    // 紙片受場景光影響，但保留 45% 自發光，維持貼紙的清晰可讀（背光時也不會整張變黑）
+    this.mat = new THREE.MeshLambertMaterial({ map: this.tex, emissiveMap: this.tex, emissive: 0xffffff, emissiveIntensity: 0.45, alphaTest: 0.5, side: THREE.DoubleSide });
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.castShadow = true;
     this.mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: this.tex, alphaTest: 0.5 });
     // 紙緣：與紙面垂直的細條，側向 90° 時看得到一條白色厚度邊
     const egeo = new THREE.PlaneGeometry(thickness, height);
     egeo.translate(0, yOff, 0);
-    this.edgeMat = new THREE.MeshStandardMaterial({ map: this.edgeTex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.95, metalness: 0, emissive: 0xffffff, emissiveMap: this.edgeTex, emissiveIntensity: 0.5 });
+    this.edgeMat = new THREE.MeshLambertMaterial({ map: this.edgeTex, emissiveMap: this.edgeTex, emissive: 0xffffff, emissiveIntensity: 0.45, alphaTest: 0.5, side: THREE.DoubleSide });
     this.edge = new THREE.Mesh(egeo, this.edgeMat);
     this.edge.rotation.y = Math.PI / 2;
     this.group = new THREE.Group();
