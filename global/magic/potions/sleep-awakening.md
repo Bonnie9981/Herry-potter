@@ -1,9 +1,13 @@
 # 睡眠、清醒與狀態調節類魔藥
 
-初始索引：
-- 生死水（Draught of Living Death）
-- 清醒劑（Wideye/Awakening Potion）
-- 安眠藥水（Sleeping Draught）
-- 其他睡眠、清醒、體力或狀態調節藥劑
+| 魔藥 | 效果／用途 | 注意 |
+|---|---|---|
+| 生死水（Draught of Living Death） | 使飲用者陷入極深沉睡眠 | 高階魔藥；材料與製作要求嚴格 |
+| 清醒劑（Wideye / Awakening Potion） | 使飲用者保持清醒或從睡眠狀態恢復 | 不等於解除所有昏迷原因 |
+| 安眠藥水（Sleeping Draught） | 使飲用者入睡 | 效果強度與持續時間依配方 |
+| 平靜劑（Draught of Peace） | 緩和焦慮與激動情緒 | O.W.L. 常見考試魔藥之一；製作要求精準 |
+| 活力滋補劑（Strengthening Solution） | 恢復／增強體力 | 亦可列於恢復類 |
+| Pepperup Potion | 緩解感冒、恢復精神 | 可能使耳朵冒出蒸氣 |
 
-逐項補齊原著材料與製作流程，並記錄藥效持續時間、劑量及風險。
+## 注意
+藥效、劑量與持續時間依原著已知資訊記錄。不能把睡眠藥劑當成安全麻醉，也不可假設所有昏迷都能以清醒劑解除。
