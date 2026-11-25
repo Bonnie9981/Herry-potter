@@ -1,0 +1,62 @@
+name: 主持者反思／模擬品質回報
+description: 回報主持過程中的判定錯誤、狀態矛盾、NPC 行為或存檔問題
+title: "[反思] "
+labels: ["reflection", "needs-triage"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: 問題類型
+      options:
+        - 玩家意圖理解錯誤
+        - 行動判定或代價不合理
+        - NPC 自主性／知識邊界錯誤
+        - 時間、位置或資源狀態矛盾
+        - 存檔／跨對話恢復問題
+        - 正典或資料錯誤
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 情境與可重現步驟
+      description: 請描述必要背景與玩家採取的行動；不要貼私人對話或個資。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 實際結果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 證據或相關檔案
+      description: 可提供去識別化的狀態欄位、事件 ID 或公開檔案路徑。
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 可能影響範圍
+      options:
+        - 只影響單次模擬
+        - 可能影響共用規則
+        - 尚不確定
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隱私確認
+      options:
+        - label: 我確認沒有提交真實個資、密碼或未經同意的私人對話。
+          required: true
