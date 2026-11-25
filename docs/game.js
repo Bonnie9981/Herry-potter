@@ -23,10 +23,10 @@ function say(t){$("#message").textContent=t}
 function tick(n=5){state.minute+=n;while(state.minute>=60){state.minute-=60;state.hour++}if(state.hour>=24){state.hour=0;state.day++}$("#clock").textContent="第 "+state.day+" 天　"+String(state.hour).padStart(2,"0")+":"+String(state.minute).padStart(2,"0")}
 function closePanels(){$$(".panel").forEach(x=>x.hidden=true);$("#map-modal").hidden=true}
 function render(){
-const p=places.find(x=>x.id===state.location);$("#place-name").textContent=p.name;$("#place-floor").textContent=p.floor;$("#place-desc").textContent=p.desc;$("#scene-title").textContent=p.name;
+const p=places.find(x=>x.id===state.location);$("#place-floor").textContent=p.floor;$("#place-desc").textContent=p.desc;$("#scene-title").textContent=p.name;
 $("#scene-art").src=state.location==="library"?"./assets/art-direction/霍格華茲圖書館奇遇-2.png":"";$("#scene-art").style.display=state.location==="library"?"block":"none";$("#scene").dataset.location=state.location;
 $("#hotspots").replaceChildren();
-(things[state.location]||[]).forEach(o=>{const b=document.createElement("button");b.className="hotspot";b.textContent=(o[2]==="人物"?"♟ ":"✧ ")+o[1];b.style.left=(o[5]||[28,52,73,43][i%4])+"%";b.style.top=(o[6]||[42,58,40,76][i%4])+"%";b.addEventListener("click",()=>target(o));$("#hotspots").append(b)});
+(things[state.location]||[]).forEach((o,i)=>{const b=document.createElement("button");b.className="hotspot";b.textContent=(o[2]==="人物"?"♟ ":"✧ ")+o[1];b.style.left=(o[5]||[28,52,73,43][i%4])+"%";b.style.top=(o[6]||[42,58,40,76][i%4])+"%";b.addEventListener("click",()=>target(o));$("#hotspots").append(b)});
 $("#location-list").replaceChildren();places.forEach(x=>{const b=document.createElement("button");b.className="location-option"+(x.id===state.location?" current":"");b.disabled=!x.open;b.innerHTML="<span>"+x.icon+"</span><span><b>"+x.name+"</b><small>"+x.floor+(x.open?"":" · 尚未開放")+"</small></span>";b.addEventListener("click",()=>travel(x.id));$("#location-list").append(b)});
 $("#inventory-count").textContent=state.inventory.length;$("#inventory").textContent=state.inventory.join("、");$("#quest-status").textContent=state.questDone?"已完成":"進行中";$("#quest-progress").textContent=state.questDone?"你找到了夾在古書裡的紙條。":"找到古書裡夾著的紙條。";tick(0)}
 function travel(id){const p=places.find(x=>x.id===id);if(!p||!p.open)return;state.location=id;closePanels();$("#target-card").hidden=true;tick(3);say("你前往了"+p.name+"。"+p.desc);render()}
