@@ -1,17 +1,27 @@
 # 惡咒、咒罵、詛咒與黑魔法
 
-依原著概念區分 Jinx、Hex、Curse；三者不可全部混稱為同一類。另設黑魔法、不可饒恕咒及其法律後果。
+## 分類
+Jinx、Hex、Curse 在原著語境中有程度與用途差異，但並非每個案例都能用簡單強弱表概括。黑魔法包含危害性高、侵害身心或難以解除的魔法。
 
-初始索引：
-- Petrificus Totalus：全身束縛咒（亦有不同分類語境，保留交叉標籤）
-- Tarantallegra：塔朗泰拉舞
-- Locomotor Mortis：腿鎖咒
-- Furnunculus：膿皰咒
-- Densaugeo：牙牙長
-- Levicorpus：倒掛金鐘
-- Sectumsempra：撕淌三步殺（黑魔法）
-- Avada Kedavra：索命咒
-- Crucio：酷刑咒
-- Imperio：蠻橫咒
+## 惡咒與咒罵索引
+| 咒語 | 效果 |
+|---|---|
+| Furnunculus | 使目標長出疔瘡 |
+| Densaugeo | 使牙齒異常增長 |
+| Tarantallegra | 迫使雙腿跳舞 |
+| Locomotor Mortis | 腿部束縛 |
+| Levicorpus | 將目標倒掛升起 |
+| Langlock | 使舌頭黏在上顎 |
+| Stinging Jinx | 造成刺痛與腫脹 |
+| Bat-Bogey Hex | 使鼻涕蟲般的蝙蝠狀物攻擊目標 |
 
-不可饒恕咒的使用有嚴重法律與道德後果。此索引不是鼓勵使用。
+## 黑魔法與危險咒語
+| 咒語 | 效果 | 風險 |
+|---|---|---|
+| Sectumsempra | 造成深刻切割傷 | 危險黑魔法，需特殊治療 |
+| Imperio | 控制受術者行動 | 不可饒恕咒 |
+| Crucio | 造成極端痛苦 | 不可饒恕咒 |
+| Avada Kedavra | 致命殺戮咒 | 不可饒恕咒，無一般反咒 |
+
+## 原則
+不可把學會黑魔法視為角色人格必然邪惡；但使用後果、法律責任、受害者反應與社會評價需真實呈現。不可饒恕咒有極嚴重法律後果。
