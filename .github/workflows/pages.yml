@@ -32,6 +32,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p docs/assets/art-direction
+          cp assets/art-direction/*.png docs/assets/art-direction/
           test -s docs/index.html
           test -s docs/玩家使用指南.md
           test -f docs/.nojekyll
@@ -41,6 +43,8 @@ jobs:
           ! grep -q 'function makePrompt' docs/index.html
           test -s assets/art-direction/霍格華茲圖書館奇遇-2.png
           test -s assets/art-direction/霍格華茲圖書館的魔法探索-1.png
+          test -s docs/assets/art-direction/霍格華茲圖書館奇遇-2.png
+          test -s docs/assets/art-direction/霍格華茲圖書館的魔法探索-1.png
           echo "Game entry and art reference assets are present."
 
       - name: Validate HTML structure
