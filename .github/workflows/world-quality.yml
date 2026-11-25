@@ -1,0 +1,46 @@
+name: World Data QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "global/**"
+      - "simulations/**"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/world-quality.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "global/**"
+      - "simulations/**"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/world-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: world-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-world:
+    name: Validate world data and simulation isolation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run deterministic world QA
+        run: python scripts/validate_world.py
+
+      - name: Run validator tests
+        run: python -m unittest discover -s tests -v
