@@ -46,6 +46,36 @@ jobs:
           test -s docs/assets/art-direction/霍格華茲圖書館的魔法探索-1.png
           echo "Game entry and art reference assets are present."
 
+      - name: Check game JavaScript syntax and DOM contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check docs/game.js
+          python - <<'PY'
+          import re
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class IDs(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids = set()
+              def handle_starttag(self, tag, attrs):
+                  value = dict(attrs).get("id")
+                  if value:
+                      self.ids.add(value)
+
+          html = Path("docs/index.html").read_text(encoding="utf-8")
+          js = Path("docs/game.js").read_text(encoding="utf-8")
+          parser = IDs()
+          parser.feed(html)
+          required = set(re.findall(r'\$\(["\']#([A-Za-z0-9_-]+)["\']\)', js))
+          missing = sorted(required - parser.ids)
+          if missing:
+              raise SystemExit("Missing DOM ids: " + ", ".join(missing))
+          print(f"JavaScript syntax passed; {len(required)} static DOM ids verified.")
+          PY
+
       - name: Validate HTML structure
         shell: python
         run: |
