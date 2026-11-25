@@ -1,64 +1,83 @@
 <!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#111a18"><meta name="description" content="建立你自己的霍格華茲人生模擬。"><title>霍格華茲人生模擬器｜入學大廳</title>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#241b18">
+<meta name="description" content="霍格華茲人生模擬器：直接進入魔法世界探索。">
+<title>霍格華茲人生模擬器</title>
 <style>
-:root{color-scheme:dark;--bg:#101816;--panel:#1b2822;--gold:#d6b878;--cream:#f0eadc;--muted:#b9b5a8;--line:#3b493f}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#354437,transparent 48%),var(--bg);color:var(--cream);font:16px/1.65 system-ui,-apple-system,"Noto Sans TC",sans-serif}.wrap{max-width:980px;margin:auto;padding:25px 18px 65px}.top{display:flex;justify-content:space-between;color:var(--gold);font-size:.8rem;letter-spacing:.12em}.mark{border:1px solid var(--line);padding:5px 11px;border-radius:99px}.hero{text-align:center;padding:65px 10px 42px}.crest{font-size:40px;color:var(--gold)}.eyebrow{color:var(--gold);letter-spacing:.22em;font-size:.78rem}.hero h1{font:500 clamp(2.2rem,7vw,4.4rem)/1.2 Georgia,"Noto Serif TC",serif;margin:15px 0}.hero p,.sub{color:var(--muted);max-width:650px;margin:16px auto 22px}.actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:22px}button,.btn{border:1px solid var(--gold);border-radius:8px;padding:11px 19px;background:var(--gold);color:#182019;font-weight:700;cursor:pointer;text-decoration:none;font-size:.95rem}button.secondary,.btn.secondary{background:transparent;color:var(--cream);border-color:var(--line)}.rule{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:25px 0 35px}.section-title{font:500 1.7rem Georgia,"Noto Serif TC",serif;margin:0 0 6px}.panel{background:linear-gradient(145deg,#1b2822,#151e1a);border:1px solid var(--line);border-radius:14px;padding:23px;margin-top:22px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.field{display:flex;flex-direction:column;gap:6px}.full{grid-column:1/-1}label{font-size:.9rem;color:#e2d7bd}input,select,textarea{width:100%;background:#101916;border:1px solid var(--line);border-radius:8px;padding:11px;color:var(--cream);font:inherit}textarea{min-height:95px;resize:vertical}.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mode{border:1px solid var(--line);border-radius:9px;padding:12px;background:#111a16}.mode input{width:auto}.mode strong{display:block;color:var(--gold)}.mode small,.notice{color:var(--muted);font-size:.84rem}#prompt{min-height:300px;font: .85rem/1.5 ui-monospace,monospace}.links{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}.links a{color:var(--gold)}.footer{text-align:center;color:#8e988d;font-size:.8rem;margin-top:38px}@media(max-width:650px){.grid,.mode-grid{grid-template-columns:1fr}.hero{padding:48px 4px 30px}.panel{padding:17px}.wrap{padding:18px 13px 45px}}
-</style></head><body><main class="wrap">
-<div class="top"><span>THE WIZARDING WORLD · ROLEPLAY SIMULATOR</span><span class="mark">COMMUNITY BETA 0.1</span></div>
-<header class="hero"><div class="crest">✦　✧　✦</div><div class="eyebrow">YOUR STORY BEGINS HERE</div><h1>霍格華茲人生模擬器</h1><p>收到那封信之後，你的人生將走向哪裡？建立一條只屬於你的世界線。交朋友、學習魔法、探索城堡，或自由嘗試任何行動。</p><div class="actions"><a class="btn" href="#create">建立新角色</a><a class="btn secondary" href="#how">遊戲方式</a></div></header><div class="rule"></div><div class="panel" style="text-align:center;margin-top:8px"><h2 class="section-title">互動原型試玩</h2><p class="sub">測試 2.5D 教室、白邊紙片人物旋轉、移動與場景物件互動。</p><div class="actions"><a class="btn" href="./prototype-2-5d.html">試玩 2.5D 紙片人物原型</a></div></div>
-<section id="create"><h2 class="section-title">新生登記</h2><p class="sub">不必填完所有欄位。留白的部分交給主持人合理生成，之後仍可修改。</p><div class="panel"><div class="grid">
-<div class="field"><label for="name">角色姓名</label><input id="name" placeholder="例如：Evelyn Ashford"></div>
-<div class="field"><label for="birthday">生日（選填）</label><input id="birthday" placeholder="例如：1980 年 3 月 14 日"></div>
-<div class="field"><label for="gender">性別／稱謂（選填）</label><input id="gender" placeholder="可自行描述"></div>
-<div class="field"><label for="origin">出身</label><select id="origin"><option>隨機／交由主持人安排</option><option>純血</option><option>混血</option><option>麻瓜出身</option></select></div>
-<div class="field"><label for="house">學院</label><select id="house"><option>由分類帽決定</option><option>葛來分多</option><option>史萊哲林</option><option>赫夫帕夫</option><option>雷文克勞</option></select></div>
-<div class="field"><label for="year">入學年份</label><input id="year" type="number" value="1991" min="1800" max="2100"></div>
-<div class="field full"><label>世界模式</label><div class="mode-grid"><label class="mode"><input type="radio" name="world" value="正典優先" checked><strong>正典優先</strong><small>盡量遵循原著事件與人物設定。</small></label><label class="mode"><input type="radio" name="world" value="正典分歧"><strong>正典分歧</strong><small>保留原著世界，玩家行動可改變歷史。推薦。</small></label><label class="mode"><input type="radio" name="world" value="平行自由世界"><strong>平行自由世界</strong><small>以魔法世界為基礎，開放更大幅度自訂。</small></label></div></div>
-<div class="field"><label for="pace">遊戲節奏</label><select id="pace"><option>平衡：日常、關係與冒險並重</option><option>校園日常與人際關係優先</option><option>探索、謎團與冒險優先</option><option>自由沙盒：由玩家決定節奏</option></select></div>
-<div class="field"><label for="canon">原著角色互動</label><select id="canon"><option>自然相遇，依時間線與情境安排</option><option>希望多與原著角色互動</option><option>以原創角色和自己的生活為主</option></select></div>
-<div class="field full"><label for="extra">其他想設定的內容（選填）</label><textarea id="extra" placeholder="家庭氣氛、個性、外貌、興趣、特殊背景、想避開的題材……"></textarea></div>
-</div><div class="actions"><button id="generate">生成我的開局指令</button></div></div></section>
-<section class="panel" id="result" hidden><h2 class="section-title">你的入學邀請函</h2><p class="sub">複製下方完整指令，貼到 ChatGPT 或其他相容的 AI 對話工具，即可開始遊戲。</p><textarea id="prompt" readonly></textarea><div class="actions"><button id="copy">複製開局指令</button><button class="secondary" id="download">下載角色設定 JSON</button></div><p class="notice" id="status" aria-live="polite"></p></section>
-<section class="panel"><h2 class="section-title">帶著存檔回來</h2><p class="sub">角色設定由你保管。可匯入之前下載的 JSON；遊戲進度則請定期請主持人產生完整文字存檔。</p><div class="actions"><label class="btn secondary" for="importFile">匯入角色 JSON</label><input id="importFile" type="file" accept=".json,application/json" hidden></div><p class="notice" id="importStatus" aria-live="polite"></p></section>
-<section id="how" class="panel"><h2 class="section-title">如何開始遊玩</h2><ol><li>填寫新生資料，選擇世界模式。</li><li>生成並複製開局指令。</li><li>開啟 ChatGPT 新對話，貼上指令並送出。</li><li>之後可自由輸入任何行動，不受選單限制。</li><li>定期請主持人產生完整存檔，並自行下載保存。</li></ol><p class="notice">本網站不會自動連接 AI 或替你發布訊息。每位玩家使用自己的 AI 對話與存檔。</p><div class="links"><a href="https://github.com/Bonnie9981/Herry-potter">遊戲資料庫與原始碼</a><a href="https://github.com/Bonnie9981/Herry-potter/blob/main/docs/霍格華茲模擬器完整指令.md">完整主持規則</a><a href="https://github.com/Bonnie9981/Herry-potter/blob/main/docs/高自由度模擬器紅隊與玩家品鑑.md">紅隊品鑑報告</a></div></section>
-<footer class="footer">非官方粉絲創作與文字模擬專案，與 J.K. Rowling、Wizarding World 或其權利人無隸屬關係。相關角色與世界觀權利仍歸原權利人所有。<br>玩家設定僅保存在你的裝置或你自行下載的檔案中。</footer>
-</main><script>
-const $=id=>document.getElementById(id);
-function settings(){return {name:$('name').value.trim()||'由玩家稍後命名',birthday:$('birthday').value.trim()||'未指定',gender:$('gender').value.trim()||'由玩家自行決定',origin:$('origin').value,house:$('house').value,year:$('year').value||'1991',world:document.querySelector('input[name="world"]:checked').value,pace:$('pace').value,canon:$('canon').value,extra:$('extra').value.trim()};}
-function makePrompt(s){return [
-'請啟動一場全新、長期運行的霍格華茲人生模擬。你是遊戲主持人與世界模擬器，使用繁體中文（臺灣用語），第二人稱「你」稱呼玩家。',
-'',
-'【本次新模擬角色】',
-'姓名：'+s.name,'生日：'+s.birthday,'性別／稱謂：'+s.gender,'出身：'+s.origin,'學院：'+s.house,'入學年份：'+s.year,'世界模式：'+s.world,'節奏：'+s.pace,'原著角色互動：'+s.canon,'玩家補充：'+(s.extra||'未補充，請依合理背景生成。'),
-'',
-'【核心規則】',
-'1. 本次是全新且獨立的模擬。不得沿用任何既有測試角色或其他玩家的姓名、家庭、能力、物品、關係、事件與存檔。',
-'2. 未填資料可合理補完，但先展示角色設定與天賦表供玩家確認，再開始劇情。不得替玩家決定重大選擇。',
-'3. 天賦以 0–100 分分領域記錄，說明各自效果。天賦、知識、熟練度、經驗、當前狀態與實際表現分開；天賦 100 不代表全知或掌握所有技能。',
-'4. 咒語、魔藥與特殊能力逐項記錄。未知咒語或配方不能因天賦高就直接使用。施法考慮知識、熟練度、魔杖、情緒、環境、體力及魔法機制。',
-'5. 世界是持續運作的沙盒。玩家可自由描述任何合理行動，不受選單限制；選項最多四個且僅供參考。NPC 有自己的目標、行程、關係與秘密，不會只圍繞玩家或無條件喜歡玩家。',
-'6. 行動有合理的時間、距離、資源與風險成本。依世界規則判定成功、部分成功或失敗，並呈現合理後果。',
-'7. 嚴守知識邊界：玩家、角色、NPC、主持人掌握的資訊彼此區分，秘密不可提前洩漏。',
-'8. 追蹤日期、時間、地點、角色狀態、物品、學習進度、關係、承諾、線索與事件因果。重大事件後更新狀態，必要時產生可攜式完整存檔。',
-'9. 世界模式遵循「'+s.world+'」。玩家行動若改變原著事件，推演連鎖影響，不強行拉回原著。',
-'10. 劇情兼顧校園生活、成長、友誼、競爭、冒險與謎團，節奏自然，不要每一小步都停下詢問。',
-'11. 原創人物、事件與魔法預設只屬於本次模擬，不得冒充原著設定。',
-'12. 玩家可隨時查看角色狀態、能力表、關係表、時間線、物品清單或存檔。',
-'',
-'【主持規則與資料庫】',
-'https://github.com/Bonnie9981/Herry-potter',
-'https://github.com/Bonnie9981/Herry-potter/blob/main/docs/霍格華茲模擬器完整指令.md',
-'https://github.com/Bonnie9981/Herry-potter/tree/main/global',
-'若無法讀取連結，不得假裝已讀取；先依本訊息核心規則運作，並告知玩家可貼上需要的資料。',
-'',
-'【開始流程】',
-'第一步：整理角色基本設定、家庭背景、個性、天賦表（各項 0–100 並說明作用）、初始知識與技能、物品及初始人際關係，標示主持人補完項目。',
-'第二步：讓玩家確認或修改設定。若玩家要求直接開始，則採合理預設。',
-'第三步：從入學前生活與霍格華茲錄取通知開始，依年份和世界時間線安排事件。',
-'第四步：正式進入沉浸式劇情，結尾提供最多四個建議行動，並始終允許自由輸入。',
-'請先執行第一步，不要直接跳進劇情。'
-].join('\n');}
-$('generate').addEventListener('click',()=>{const s=settings();$('prompt').value=makePrompt(s);$('result').hidden=false;$('status').textContent='已生成。請複製指令並貼到新的 AI 對話。';$('result').scrollIntoView({behavior:'smooth',block:'start'});});
-$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('prompt').value);$('status').textContent='已複製到剪貼簿！';}catch(e){$('prompt').select();$('status').textContent='瀏覽器未授權自動複製，請長按選取文字複製。';}});
-$('download').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({format:'hogwarts-sim-player-v1',createdAt:new Date().toISOString(),character:settings()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hogwarts-character.json';a.click();URL.revokeObjectURL(a.href);});
-$('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text()),s=d.character||d;for(const k of ['name','birthday','gender','origin','house','year','pace','canon','extra'])if(s[k]!==undefined&&$(k))$(k).value=s[k];if(s.world){const r=document.querySelector('input[name="world"][value="'+s.world+'"]');if(r)r.checked=true;}$('importStatus').textContent='角色設定已匯入，請檢查後重新生成開局指令。';}catch(err){$('importStatus').textContent='檔案格式無法辨識，請使用本入口匯出的角色 JSON。';}});
-</script></body></html>
+:root{color-scheme:dark;--gold:#d8b779;--cream:#f4e7cf;--ink:#251a16;--panel:#261d1adf;--line:#b9935b}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171311;color:var(--cream);font-family:Georgia,"Noto Serif TC",serif}
+#game{position:relative;width:100%;height:100%;min-height:420px;background:#211a17;isolation:isolate}
+#scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;user-select:none;-webkit-user-drag:none;transition:opacity .22s ease}
+#shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#100c0a55 0%,transparent 22%,transparent 72%,#100c0acc 100%)}
+.brand{position:absolute;left:clamp(12px,2vw,30px);top:clamp(12px,2vw,24px);padding:8px 14px;border:1px solid #d0ad70a8;border-radius:6px;background:#201713b8;backdrop-filter:blur(8px);font-size:clamp(12px,1.1vw,15px);letter-spacing:.08em}
+.brand b{color:var(--gold);font-weight:500}
+.top-actions{position:absolute;right:clamp(12px,2vw,28px);top:clamp(12px,2vw,24px);display:flex;gap:8px}
+button{font:inherit;color:var(--cream);cursor:pointer;border:1px solid #d2b27b;background:#2b201bd9;border-radius:7px;padding:9px 13px;backdrop-filter:blur(8px);transition:background .15s,border-color .15s}
+button:hover,button:focus-visible{background:#60452d;border-color:#f2d49a;outline:none}
+#interaction{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:none;min-width:min(260px,80vw);padding:12px;background:#211713eF;border:1px solid var(--gold);border-radius:12px;box-shadow:0 12px 35px #0008}
+#interaction.open{display:grid;gap:8px}
+#interaction h2{font-size:17px;font-weight:500;color:var(--gold);margin:2px 5px 5px}
+#interaction button{text-align:left;background:#3b2b22}
+#interaction button span{color:#e2c28a;margin-right:10px}
+#message{position:absolute;left:50%;bottom:clamp(72px,11vh,110px);transform:translateX(-50%);max-width:min(680px,90vw);padding:10px 18px;text-align:center;background:#211713e8;border:1px solid #a88758;border-radius:8px;box-shadow:0 6px 25px #0008;font-size:clamp(13px,1.2vw,16px)}
+#toolbar{position:absolute;left:50%;bottom:clamp(12px,2vh,24px);transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px;border:1px solid #b18d5c99;border-radius:12px;background:#1e1714db;backdrop-filter:blur(10px);white-space:nowrap}
+#toolbar button{min-width:82px}
+#toolbar button.active{background:#78552f;color:#fff0d0}
+#help{position:absolute;right:clamp(12px,2vw,28px);bottom:clamp(12px,2vh,24px);font:12px/1.5 system-ui,sans-serif;color:#f3e4cb;background:#1c1512b8;padding:8px 11px;border-radius:7px}
+#drawer{position:absolute;right:18px;top:70px;width:min(320px,calc(100vw - 36px));padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(12px);display:none;box-shadow:0 12px 40px #0008}
+#drawer.open{display:block}#drawer h2{margin:0 0 10px;color:var(--gold);font-size:20px;font-weight:500}#drawer p{font:14px/1.7 system-ui,sans-serif;color:#e4d5bf;margin:0 0 12px}
+#drawer .close{float:right;padding:3px 9px}
+#notice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,90vw);padding:22px;background:#211915f2;border:1px solid var(--gold);border-radius:12px;box-shadow:0 20px 80px #000b;text-align:center}
+#notice h1{font-size:clamp(23px,4vw,38px);font-weight:500;color:var(--gold);margin:0 0 10px}
+#notice p{font:14px/1.7 system-ui,sans-serif;color:#e5d8c5}
+#notice button{margin-top:8px;padding:11px 28px;background:#8c6336;color:#fff0d5}
+@media(max-width:700px){#toolbar{width:calc(100% - 24px);justify-content:center;gap:5px}#toolbar button{min-width:0;flex:1;padding:9px 5px;font-size:13px}#help{display:none}.brand{font-size:11px}}
+</style>
+</head>
+<body>
+<main id="game" aria-label="霍格華茲圖書館遊戲畫面">
+<img id="scene" src="../assets/art-direction/霍格華茲圖書館奇遇-2.png" alt="霍格華茲圖書館探索場景">
+<div id="shade"></div>
+<div class="brand"><b>✦ 霍格華茲</b>　圖書館 · 探索中</div>
+<div class="top-actions"><button id="mapBtn">地圖</button><button id="bagBtn">背包</button><button id="menuBtn">選單</button></div>
+<section id="interaction" aria-label="場景互動選單">
+<h2 id="targetTitle">圖書館</h2>
+<button data-action="read"><span>▤</span>閱讀</button>
+<button data-action="inspect"><span>⌕</span>調查</button>
+<button data-action="talk"><span>☏</span>交談</button>
+<button data-action="cancel"><span>×</span>取消</button>
+</section>
+<div id="message" role="status">你來到了霍格華茲圖書館。午後陽光穿過高窗，空氣裡飄著淡淡的舊紙與木頭香氣。</div>
+<nav id="toolbar" aria-label="遊戲功能">
+<button class="active" data-panel="explore">探索</button><button data-panel="quests">任務</button><button data-panel="bag">背包</button><button data-panel="map">地圖</button>
+</nav>
+<div id="help">點擊場景中的人物或物件，開始互動</div>
+<aside id="drawer"><button class="close" id="closeDrawer">✕</button><h2 id="drawerTitle">探索</h2><p id="drawerText">你正在圖書館探索。試著與附近的學生交談，或調查桌上的古老書籍。</p></aside>
+<section id="notice">
+<h1>霍格華茲人生模擬器</h1>
+<p>你的故事，從這座魔法城堡開始。走進圖書館，探索環境、認識學生，尋找藏在書頁與日常之中的秘密。</p>
+<p><small>目前為遊戲畫面原型：先確立正式入口與視覺方向，互動與角色移動系統會逐步接上。</small></p>
+<button id="enter">進入遊戲</button>
+</section>
+</main>
+<script>
+const scene=document.getElementById('scene'),interaction=document.getElementById('interaction'),message=document.getElementById('message'),drawer=document.getElementById('drawer');
+let state='explore',target='圖書館';
+const interactionImage='../assets/art-direction/霍格華茲圖書館的魔法探索-1.png';
+const exploreImage='../assets/art-direction/霍格華茲圖書館奇遇-2.png';
+const messages={read:'你翻開桌上的書冊。泛黃的頁面記載著古老的魔法知識，幾行字似乎被人特意標記。',inspect:'你仔細調查四周。書架深處有一本書的書脊微微凸出，像是被反覆抽取過。',talk:'附近的學生抬起頭，合上手中的書，似乎願意和你聊聊。',cancel:'你暫時退開，圖書館恢復了安靜。'};
+function openInteraction(name){target=name;document.getElementById('targetTitle').textContent=name;interaction.classList.add('open');message.textContent='你靠近了'+name+'。想要怎麼做？';}
+function showPanel(key){const data={explore:['探索','你正在霍格華茲圖書館。可以和學生交談、閱讀書籍，或調查周遭物件。'],quests:['任務','目前任務：與圖書館的學生交談（0/1）。探索環境，尋找能推進任務的線索。'],bag:['背包','目前背包：學生用品、空白羊皮紙、羽毛筆。更多物品會在探索中取得。'],map:['地圖','目前位置：霍格華茲城堡・圖書館。地圖與可探索區域將隨遊戲進度逐步開放。'],menu:['遊戲選單','遊戲原型。正式存檔、設定與離開功能將在後續接入。']};document.getElementById('drawerTitle').textContent=data[key][0];document.getElementById('drawerText').textContent=data[key][1];drawer.classList.add('open');}
+document.getElementById('enter').addEventListener('click',()=>document.getElementById('notice').remove());
+document.getElementById('closeDrawer').addEventListener('click',()=>drawer.classList.remove('open'));
+document.getElementById('mapBtn').addEventListener('click',()=>showPanel('map'));
+document.getElementById('bagBtn').addEventListener('click',()=>showPanel('bag'));
+document.getElementById('menuBtn').addEventListener('click',()=>showPanel('menu'));
+document.querySelectorAll('#toolbar button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#toolbar button').forEach(x=>x.classList.remove('active'));b.classList.add('active');showPanel(b.dataset.panel);}));
+scene.addEventListener('click',e=>{const r=scene.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;let name='書架';if(x>.48&&y>.42&&y<.72)name='中央閱讀桌';else if(x>.78&&y>.35)name='正在閱讀的學生';else if(x<.25&&y<.5)name='高層書架';else if(x>.62&&y<.3)name='古老星象儀';openInteraction(name);});
+document.querySelectorAll('#interaction button').forEach(b=>b.addEventListener('click',()=>{const action=b.dataset.action;if(action==='cancel'){interaction.classList.remove('open');scene.src=exploreImage;message.textContent=messages.cancel;return;}scene.src=interactionImage;message.textContent=messages[action];interaction.classList.remove('open');}));
+</script>
+</body></html>
