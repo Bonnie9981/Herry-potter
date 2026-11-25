@@ -1,19 +1,191 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#211914"><title>霍格華茲｜人生模擬器</title>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a120d">
+<title>霍格華茲｜人生模擬器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <style>
-:root{--gold:#d8b779;--cream:#f4e7cf;--panel:#211914ed}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#17120f;color:var(--cream);font-family:Georgia,"Noto Serif TC",serif}button{font:inherit;color:inherit;cursor:pointer;border:1px solid #b9945d;background:#33251d;padding:9px 13px;border-radius:7px}button:hover:not(:disabled){background:#62472e}button:disabled{opacity:.4;cursor:not-allowed}
-#game{height:100%;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 42%,#776047,#2b211b 65%,#17120f)}#scene{position:absolute;inset:0;overflow:hidden;background:#211914}#scene-art{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}#scene:not([data-location="library"]){background:radial-gradient(ellipse at 50% 30%,#927956,#59432f 50%,#211914 100%)}#scene:not([data-location="library"]):before{content:"";position:absolute;inset:0;background:linear-gradient(150deg,#8d765755,#2b2119aa),repeating-linear-gradient(90deg,transparent 0 12%,#d6bd8a12 12.2% 12.5%)}#scene:not([data-location="library"]):after{content:"";position:absolute;left:0;right:0;bottom:0;height:32%;background:linear-gradient(0deg,#17120fdd,transparent)}
-#topbar{position:absolute;z-index:8;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}#brand,#clock{padding:10px 14px;background:#211914d9;border:1px solid #b9945d88;border-radius:8px;font-size:13px}#brand b{color:var(--gold)}#top-actions{display:flex;gap:7px}
-#scene-header{position:absolute;top:75px;left:28px;z-index:4;text-shadow:0 2px 8px #000}#scene-title{font-size:clamp(25px,3vw,42px);color:#f3dfb9;margin:0;font-weight:500}#place-desc{font:14px/1.6 system-ui,sans-serif;max-width:440px;color:#f5e7d2}
-#bottom{position:absolute;z-index:8;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px;background:#211914e8;border:1px solid #b9945d88;border-radius:12px;white-space:nowrap}#message{position:absolute;z-index:6;left:50%;bottom:82px;transform:translateX(-50%);width:min(720px,92vw);padding:12px 17px;background:#211914e8;border:1px solid #b9945d;border-radius:8px;text-align:center;font:14px/1.6 system-ui,sans-serif}
-#hotspots{position:absolute;inset:0;z-index:5;pointer-events:none}.player{position:absolute;z-index:4;left:50%;top:76%;width:clamp(42px,5vw,66px);height:clamp(82px,10vw,126px);transform:translate(-50%,-100%);transform-style:preserve-3d;pointer-events:none;filter:drop-shadow(0 5px 5px #0009);transition:left .18s linear,top .18s linear}.player-body{width:100%;height:100%;transform-style:preserve-3d;transform-origin:center;transition:transform .16s ease}.player-body svg{width:100%;height:100%;overflow:visible}.player-body .back{transform:scaleX(-1)}.player.walking{animation:player-bob .18s infinite alternate ease-in-out}@keyframes player-bob{to{translate:0 -2px}}.hotspot{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);background:#241a14e8;border:1px solid #e4c58c;color:#fff0d2;box-shadow:0 3px 14px #0009;font-size:13px;max-width:210px}
-#target-card,.panel,#map-modal,#intro{position:absolute;z-index:12;background:var(--panel);border:1px solid var(--gold);border-radius:12px;box-shadow:0 15px 50px #000a;padding:18px}#target-card{left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw)}#target-card h2,.panel h2,#map-modal h2{margin:0 0 7px;color:var(--gold);font-size:21px;font-weight:500}#target-card p,.panel p,#map-modal p{font:14px/1.7 system-ui,sans-serif;color:#e9d9c2}#target-actions{display:grid;gap:7px}#target-actions button{text-align:left}.panel{right:18px;top:76px;width:min(370px,calc(100vw - 36px));max-height:75vh;overflow:auto}#map-modal{left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,94vw);max-height:85vh;overflow:auto}#location-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}.location-option{display:flex;gap:12px;align-items:center;text-align:left;min-height:64px;background:#34271f}.location-option>span:first-child{font-size:24px;color:var(--gold)}.location-option small{display:block;color:#c9b28f;font-size:11px;margin-top:4px}.location-option.current{border-color:#f6dca8;background:#5a412b}.close{float:right;padding:3px 9px}[hidden]{display:none!important}
-#intro{left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,92vw);text-align:center;padding:26px}#intro h1{font-weight:500;color:var(--gold);font-size:clamp(26px,4vw,40px)}#intro p{font:14px/1.8 system-ui,sans-serif;color:#e8d8c0}
-@media(max-width:680px){#topbar{flex-wrap:wrap}#top-actions{gap:4px}#top-actions button{padding:8px;font-size:12px}#scene-header{top:105px;left:16px}#bottom{width:calc(100% - 20px);justify-content:center;gap:4px}#bottom button{flex:1;padding:9px 5px;font-size:12px}#message{bottom:76px;font-size:12px}#location-list{grid-template-columns:1fr}}
-</style></head><body><main id="game"><div id="scene" data-location="library"><img id="scene-art" src="./assets/art-direction/霍格華茲圖書館奇遇-2.png" alt="圖書館探索場景"><div id="hotspots"></div><div id="player" class="player" aria-label="玩家角色"><div id="player-body" class="player-body"><svg viewBox="0 0 120 220" aria-hidden="true"><g stroke="#fff8e9" stroke-width="9" stroke-linejoin="round" paint-order="stroke fill"><path d="M42 67L28 103 20 140 30 144 49 112 52 82M78 67L93 102 101 139 91 144 72 111 68 82" fill="#7d2632"/><path d="M43 112L38 177 31 205 52 207 61 151 68 207 91 207 81 175 78 112Z" fill="#252a2b"/><path d="M39 57Q60 42 81 57L83 121Q60 136 37 121Z" fill="#5a2634"/><path d="M43 68L60 121 77 68" fill="#e5d9bd" stroke-width="5"/><path d="M51 72L60 104 69 72" fill="#b58a43" stroke-width="3"/><path d="M35 25Q35 4 61 7Q88 7 87 34L82 63Q75 79 59 79Q43 77 37 59Z" fill="#eac49b"/><path d="M34 37Q23 8 52 5Q83 -2 91 24L82 37 76 22Q57 36 34 37Z" fill="#49352d"/><path d="M39 48Q48 42 54 49M67 49Q76 42 82 49" fill="none" stroke="#3a302b" stroke-width="4"/><path d="M51 62Q60 67 69 61" fill="none" stroke="#9c5d54" stroke-width="3"/></g></svg></div></div></div>
-<header id="topbar"><div id="brand"><b>✦ 霍格華茲</b>　人生模擬器</div><div id="clock">第 1 天　14:20</div><div id="top-actions"><button id="map-button">地圖／地點</button><button id="bag-button">背包 <span id="inventory-count">3</span></button><button id="quest-button">任務</button></div></header>
-<section id="scene-header"><h1 id="scene-title">圖書館</h1><small id="place-floor"></small><p id="place-desc">高聳書架、閱讀桌與午後陽光。</p></section><div id="message" role="status">午後陽光落在書頁上。</div>
-<nav id="bottom"><button id="save-button">儲存</button><button id="load-button">讀取</button></nav>
-<section id="target-card" hidden><button class="close" id="close-target">✕</button><small id="target-kind">物件</small><h2 id="target-name">目標</h2><p id="target-desc"></p><div id="target-actions"></div></section>
-<section id="map-modal" hidden><button class="close" id="close-map">✕</button><h2>霍格華茲・地點</h2><p>選擇要前往的區域。學院交誼廳需要先取得通行資格。</p><div id="location-list"></div></section>
-<aside id="panel-bag" class="panel" hidden><button class="close close-panel">✕</button><h2>背包</h2><p id="inventory"></p></aside><aside id="panel-quest" class="panel" hidden><button class="close close-panel">✕</button><h2>任務紀錄</h2><p><b>圖書館裡的異樣</b>　<span id="quest-status">進行中</span></p><p id="quest-progress"></p></aside>
-<section id="intro"><h1>霍格華茲人生模擬器</h1><p>你已經抵達霍格華茲。從圖書館開始探索，與人物交談、調查物件，並讓時間與事件隨你的行動推進。</p><p>這是遊戲本體的開發版本，不是提示詞產生器。</p><button id="enter">開始探索</button></section></main><script src="./game.js"></script></body></html>
+:root{
+  --ink:#2a1c12;--parch:#ecdcb8;--parch2:#d9c296;--gold:#d8b46a;--gold2:#9c7638;--wood:#2b1d14;--wood2:#3b281b;
+  --panel:linear-gradient(180deg,#3a2819f2,#24170ff2);--text:#f6ead2;
+  --serif:"Noto Serif TC","Songti TC",Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1a120d;color:var(--text);font-family:var(--serif);-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
+#app{position:fixed;inset:0}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%}
+#markers{position:absolute;inset:0;pointer-events:none;z-index:3}
+.marker{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:none;padding:0;width:0;height:0}
+.marker .spark{position:absolute;left:-11px;top:-11px;width:22px;height:22px;background:radial-gradient(circle,#fff6d0 0 18%,#f5cf7acc 30%,#f5cf7a00 70%);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+.marker .spark:after{content:"";position:absolute;inset:5px;border:1.5px solid #fff2c6;transform:rotate(45deg);border-radius:2px}
+.marker.near .spark{transform:scale(1.35)}
+.marker .bubble{position:absolute;left:-19px;top:-30px;width:38px;height:24px;border-radius:12px;background:#fdf8ee;color:#3a2a1e;font:700 12px/24px system-ui;text-align:center;letter-spacing:1px;box-shadow:0 2px 6px #0006;border:1.5px solid #c9b48b}
+.marker .bubble:after{content:"";position:absolute;left:10px;bottom:-6px;border:6px solid transparent;border-top-color:#fdf8ee;border-bottom:0}
+.marker.news .bubble{background:#ffe7a6}
+@keyframes pulse{50%{opacity:.55;transform:scale(.85)}}
+
+/* 頂部地點牌（羊皮紙＋徽章） */
+#loc{position:absolute;z-index:6;top:max(12px,env(safe-area-inset-top));left:14px;display:flex;align-items:center;pointer-events:none}
+#crest{width:74px;height:84px;flex:none;filter:drop-shadow(0 3px 5px #0008);z-index:1}
+#loc-plate{margin-left:-18px;padding:8px 22px 8px 26px;background:linear-gradient(180deg,#f3e6c6,#dcc497);color:var(--ink);border:2px solid #a8834a;border-radius:4px 14px 14px 4px;box-shadow:inset 0 0 12px #a07a4255,0 3px 10px #0007}
+#loc-school{font-size:14px;font-weight:700;letter-spacing:1px}
+#loc-line{font-size:17px;font-weight:700;display:flex;align-items:center;gap:6px}
+#loc-line svg{width:14px;height:14px}
+#loc-floor{font-size:12px;font-weight:500;color:#6b5236;margin-left:6px}
+#quest-tracker{position:absolute;z-index:6;top:calc(max(12px,env(safe-area-inset-top)) + 96px);left:14px;max-width:300px;padding:10px 14px 10px 44px;background:linear-gradient(90deg,#1c120bdd,#1c120b55 85%,transparent);border-radius:10px;cursor:pointer}
+#quest-tracker:before{content:"!";position:absolute;left:10px;top:11px;width:24px;height:24px;transform:rotate(45deg);border:2px solid var(--gold);border-radius:4px;background:#3a2819}
+#quest-tracker:after{content:"!";position:absolute;left:19px;top:13px;color:#ffd97c;font:700 16px/20px system-ui}
+#quest-title{color:#ffd97c;font-weight:700;font-size:15px}
+#quest-step{font-size:13px;line-height:1.5;margin-top:3px}
+#quest-tracker.done #quest-title{color:#b9e3a1}
+#clock{position:absolute;z-index:6;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:5px 16px;font-size:13px;background:#1c120bc4;border:1px solid #b9945d88;border-radius:20px;white-space:nowrap}
+
+/* 小地圖 */
+#minimap-wrap{position:absolute;z-index:6;top:max(10px,env(safe-area-inset-top));right:14px;width:150px;height:150px;border-radius:50%;padding:6px;background:radial-gradient(circle,#00000000 62%,#00000066 70%),conic-gradient(from 0deg,#c79b52,#f1d38f,#9b7536,#e7c47c,#c79b52);box-shadow:0 4px 14px #0009}
+#minimap{width:100%;height:100%;border-radius:50%;display:block}
+#minimap-wrap b{position:absolute;top:-2px;left:50%;transform:translateX(-50%);font:700 12px system-ui;color:#3a2a1e;background:#f1d38f;border-radius:8px;padding:0 5px}
+
+/* 右側圓形按鈕 */
+#side{position:absolute;z-index:6;right:14px;bottom:max(18px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;align-items:center}
+.sbtn{position:relative;width:66px;height:66px;border-radius:50%;border:3px solid #c9a35b;background:radial-gradient(circle at 40% 35%,#5a3e27,#2b1b10);box-shadow:0 4px 10px #000a,inset 0 0 0 2px #00000055;display:grid;place-items:center;padding:0}
+.sbtn svg{width:32px;height:32px;color:#f1d9a6}
+.sbtn span{position:absolute;bottom:-17px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;white-space:nowrap}
+.sbtn i{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#9e2b2b;font:700 11px/20px system-ui;font-style:normal;color:#fff;text-align:center;border:1.5px solid #f1d9a6}
+.sbtn:hover{filter:brightness(1.15)}
+
+/* 搖桿 */
+#joystick{position:absolute;z-index:6;left:22px;bottom:max(22px,env(safe-area-inset-bottom));width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,#ffffff14 0 55%,#ffffff22 56% 58%,#ffffff10 60%);border:2px solid #ffffff40;touch-action:none}
+#joy-knob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fffbf0cc,#d9ccb5aa);border:2px solid #ffffffaa;box-shadow:0 2px 8px #0008;pointer-events:none}
+#joy-knob:after{content:"✦";position:absolute;inset:0;display:grid;place-items:center;color:#8a7a62;font-size:24px}
+
+/* 情境提示與互動選單 */
+#prompt{position:absolute;z-index:5;transform:translateY(-50%);display:flex;align-items:center;gap:8px;padding:7px 16px 7px 8px;border-radius:24px;background:#2a1d14e6;border:1.5px solid #c9a35b;box-shadow:0 3px 10px #0008;pointer-events:none;white-space:nowrap}
+#prompt-icon{width:30px;height:30px;border-radius:50%;background:#f1e3c4;color:#3a2a1e;display:grid;place-items:center}
+#prompt-icon svg{width:19px;height:19px}
+#prompt-label{font-weight:700;font-size:16px}
+#prompt-name{font-size:12px;color:#d9c49b}
+#prompt kbd{font:700 11px system-ui;border:1px solid #c9a35b;border-radius:4px;padding:1px 5px;color:#f1d9a6}
+#action-menu{position:absolute;z-index:8;min-width:186px}
+#action-title{font-size:12px;color:#e8d3a6;margin:0 0 6px 4px;text-shadow:0 1px 3px #000}
+#action-menu:before{content:"";position:absolute;left:-12px;top:50%;border:9px solid transparent;border-right-color:#f1e3c4;border-left:0;transform:translateY(-50%)}
+#action-list{display:grid;gap:7px}
+#action-list button{display:flex;align-items:center;gap:12px;padding:8px 22px 8px 10px;border-radius:12px;border:1.5px solid #9c7638;background:linear-gradient(180deg,#3f2b1c,#24170f);box-shadow:0 3px 8px #0009;font-size:17px;font-weight:700;text-align:left;animation:pop .18s ease-out both}
+#action-list button:hover,#action-list button:focus-visible{background:linear-gradient(180deg,#5b3f28,#382416);outline:none;border-color:#e4c37e}
+#action-list i{width:28px;height:28px;display:grid;place-items:center;color:#f1e3c4}
+#action-list i svg{width:24px;height:24px}
+@keyframes pop{from{opacity:0;transform:translateX(-8px)}}
+
+/* 對話框 */
+#dialog{position:absolute;z-index:9;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100% - 200px));min-height:150px;display:flex;gap:16px;padding:16px 20px;background:linear-gradient(180deg,#f3e6c6,#dcc497);color:var(--ink);border:3px solid #a8834a;border-radius:12px;box-shadow:0 8px 30px #000a}
+#dialog-portrait{flex:none;width:110px;height:110px;border-radius:50%;background:#c9b083 center/cover;border:3px solid #a8834a}
+#dialog-name{font-weight:700;font-size:18px;color:#6b2b24}
+#dialog-text{font-size:16px;line-height:1.75;margin:6px 0 10px;user-select:text}
+#dialog-options{display:flex;flex-wrap:wrap;gap:8px}
+#dialog-options button{padding:7px 14px;border-radius:8px;border:1.5px solid #8a6a3a;background:#2b1d14;color:#f6ead2;font-size:14px}
+#dialog-options button:hover{background:#4a3220}
+
+#toast{position:absolute;z-index:7;left:50%;bottom:calc(max(18px,env(safe-area-inset-bottom)) + 8px);transform:translateX(-50%);width:min(680px,calc(100% - 220px));padding:12px 18px;background:#1c120be8;border:1px solid #b9945d;border-radius:10px;font-size:15px;line-height:1.7;text-align:center;pointer-events:none;box-shadow:0 4px 14px #0008}
+
+/* 面板 */
+.panel{position:absolute;z-index:10;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 28px));max-height:min(80vh,640px);overflow:auto;padding:22px 24px;background:linear-gradient(180deg,#f3e6c6,#dcc497);color:var(--ink);border:3px solid #a8834a;border-radius:14px;box-shadow:0 14px 50px #000c}
+.panel h2{margin:0 0 12px;font-size:22px;color:#5a2a1c}
+.panel .close{position:absolute;right:12px;top:10px;width:34px;height:34px;border-radius:50%;border:1.5px solid #8a6a3a;background:#2b1d14;color:#f6ead2}
+.panel ul{margin:0;padding-left:1.2em;line-height:2}
+.panel li.ok{color:#3c6b2e}.panel li.ok:before{content:"✓ "}.panel li.cur{font-weight:700}
+.panel p{line-height:1.8;font-size:15px}
+#map-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.place{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;border:1.5px solid #8a6a3a;background:#2b1d14;color:#f6ead2;text-align:left}
+.place .pi{font-size:24px;color:var(--gold);width:28px;text-align:center}
+.place small{display:block;font-size:12px;color:#cdb68c}
+.place.current{outline:2px solid #e4c37e}
+.place:disabled{opacity:.55;cursor:default}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.menu-grid button,.big{padding:12px;border-radius:10px;border:1.5px solid #8a6a3a;background:#2b1d14;color:#f6ead2;font-size:16px}
+#panel-art img{width:100%;border-radius:8px;border:2px solid #a8834a;margin-bottom:10px}
+
+#intro{position:absolute;z-index:20;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#1a120d55,#1a120dee 75%)}
+#intro .card{width:min(520px,calc(100% - 32px));text-align:center;padding:30px 28px;background:linear-gradient(180deg,#f3e6c6,#dcc497);color:var(--ink);border:3px solid #a8834a;border-radius:16px;box-shadow:0 20px 60px #000c}
+#intro h1{margin:6px 0 4px;font-size:clamp(26px,5vw,36px);color:#5a2a1c}
+#intro p{line-height:1.85;font-size:15px}
+#intro .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#loading{font-size:13px;color:#7a5c3a}
+body.ready #loading{display:none}
+body:not(.ready) #intro .row{visibility:hidden}
+#fade{position:absolute;inset:0;z-index:15;background:#120c08;opacity:0;pointer-events:none;transition:opacity .28s}
+#fade.on{opacity:1}
+#boot-error{position:absolute;z-index:30;inset:0;display:grid;place-items:center;padding:20px;background:#1a120d;text-align:center;line-height:1.8}
+
+@media (max-width:720px){
+  #crest{width:52px;height:60px}#loc-plate{padding:5px 14px 5px 22px}#loc-school{font-size:11px}#loc-line{font-size:14px}
+  #quest-tracker{top:78px;max-width:220px;padding:8px 10px 8px 40px}#quest-step{font-size:12px}
+  #clock{top:auto;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 150px);font-size:11px}
+  #minimap-wrap{width:104px;height:104px}
+  .sbtn{width:52px;height:52px}.sbtn svg{width:25px;height:25px}.sbtn span{font-size:11px;bottom:-15px}#side{gap:16px}
+  #joystick{width:118px;height:118px;left:14px}#joy-knob{width:52px;height:52px;margin:-26px}
+  #toast,#dialog{left:12px;transform:none;width:calc(100% - 92px);bottom:calc(max(14px,env(safe-area-inset-bottom)) + 140px);font-size:14px}
+  #dialog{flex-direction:column;align-items:flex-start}#dialog-portrait{width:64px;height:64px}
+  #map-list,.menu-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<main id="app">
+  <div id="view" aria-label="遊戲畫面"></div>
+  <div id="markers"></div>
+
+  <header id="loc">
+    <svg id="crest" viewBox="0 0 74 84" aria-hidden="true"><defs><linearGradient id="cg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3b4a72"/><stop offset="1" stop-color="#1c243c"/></linearGradient><linearGradient id="cb" x1="0" x2="1"><stop offset="0" stop-color="#f1d38f"/><stop offset="1" stop-color="#9b7536"/></linearGradient></defs><path d="M37 3L70 13V44C70 64 54 76 37 81 20 76 4 64 4 44V13Z" fill="url(#cg)" stroke="url(#cb)" stroke-width="4"/><path d="M37 18l4 14 14 4-14 4-4 14-4-14-14-4 14-4z" fill="#f1d38f"/><circle cx="37" cy="36" r="3" fill="#3b4a72"/></svg>
+    <div id="loc-plate"><div id="loc-school">霍格華茲魔法學校</div><div id="loc-line"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" fill="#3a2a1e"/></svg><span id="loc-name">圖書館</span><span id="loc-floor">三樓</span></div></div>
+  </header>
+  <div id="quest-tracker" role="button" tabindex="0"><div id="quest-title">新的任務</div><div id="quest-step"></div></div>
+  <div id="clock">第 1 天</div>
+  <div id="minimap-wrap"><canvas id="minimap" width="280" height="280"></canvas><b>N</b></div>
+
+  <nav id="side">
+    <button class="sbtn" id="btn-bag" aria-label="背包"><svg viewBox="0 0 24 24"><path d="M7 8V6a5 5 0 0 1 10 0v2M5 8h14l-1 13H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 13h6" stroke="currentColor" stroke-width="1.8"/></svg><span>背包</span><i id="bag-count">3</i></button>
+    <button class="sbtn" id="btn-quest" aria-label="任務"><svg viewBox="0 0 24 24"><path d="M6 3h10l3 3v15H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 9h7M9 13h7M9 17h4" stroke="currentColor" stroke-width="1.6"/></svg><span>任務</span></button>
+    <button class="sbtn" id="btn-map" aria-label="地圖"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z M9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>地圖</span></button>
+    <button class="sbtn" id="btn-menu" aria-label="選單"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 5l2 7-2 7-2-7z" fill="currentColor"/></svg><span>選單</span></button>
+  </nav>
+  <div id="joystick" aria-label="移動搖桿"><div id="joy-knob"></div></div>
+
+  <div id="prompt" hidden><span id="prompt-icon"></span><span><span id="prompt-label">調查</span><br><span id="prompt-name"></span></span><kbd>E</kbd></div>
+  <section id="action-menu" hidden><div id="action-title"></div><div id="action-list"></div></section>
+  <section id="dialog" hidden><div id="dialog-portrait"></div><div><div id="dialog-name"></div><div id="dialog-text"></div><div id="dialog-options"></div></div></section>
+  <div id="toast" role="status" hidden></div>
+
+  <section class="panel" id="panel-bag" hidden><button class="close" aria-label="關閉">✕</button><h2>背包</h2><ul id="bag-list"></ul></section>
+  <section class="panel" id="panel-quest" hidden><button class="close" aria-label="關閉">✕</button><h2>任務紀錄</h2><p><b>圖書館裡的異樣</b></p><ul id="quest-list"></ul></section>
+  <section class="panel" id="panel-map" hidden><button class="close" aria-label="關閉">✕</button><h2>霍格華茲・地點</h2><p>選擇要前往的區域（移動約需 10 分鐘）。</p><div id="map-list"></div></section>
+  <section class="panel" id="panel-menu" hidden><button class="close" aria-label="關閉">✕</button><h2>選單</h2>
+    <div class="menu-grid"><button id="btn-save">儲存進度</button><button id="btn-load">讀取進度</button><button id="btn-help">操作說明</button><button id="btn-art">美術基準</button></div></section>
+  <section class="panel" id="panel-help" hidden><button class="close" aria-label="關閉">✕</button><h2>操作說明</h2>
+    <p>移動：WASD／方向鍵，或拖曳左下搖桿；也可以直接點地面，角色會自動繞過家具走過去。</p>
+    <p>互動：靠近發光的物件或頭上有「•••」的人物，按 E／空白鍵或點擊它，選擇閱讀、調查、交談等動作。</p>
+    <p>時間：遊戲內 1 分鐘約等於現實 1 秒，開啟面板時暫停。人物會依時段出現在不同地點。</p>
+    <p>鏡頭：滑鼠滾輪縮放。被書架擋住時，角色會顯示淡紫色剪影。</p></section>
+  <section class="panel" id="panel-art" hidden><button class="close" aria-label="關閉">✕</button><h2>美術基準（驗收參考）</h2>
+    <img src="./assets/art-direction/霍格華茲圖書館奇遇-2.png" alt="圖書館探索參考圖" loading="lazy">
+    <img src="./assets/art-direction/霍格華茲圖書館的魔法探索-1.png" alt="圖書館互動參考圖" loading="lazy"></section>
+
+  <section id="intro"><div class="card">
+    <svg viewBox="0 0 74 84" width="64" height="72" aria-hidden="true"><path d="M37 3L70 13V44C70 64 54 76 37 81 20 76 4 64 4 44V13Z" fill="#2c3a5e" stroke="#c79b52" stroke-width="4"/><path d="M37 18l4 14 14 4-14 4-4 14-4-14-14-4 14-4z" fill="#f1d38f"/></svg>
+    <h1>霍格華茲人生模擬器</h1>
+    <p>傍晚的圖書館裡，陽光穿過高窗落在石地板上。<br>從這裡開始探索，與人物交談、調查物件，讓時間隨你的行動推進。</p>
+    <div class="row"><button class="big" id="btn-start">開始探索</button><button class="big" id="btn-continue" hidden>繼續上次進度</button></div>
+    <p id="loading">場景載入中…</p>
+  </div></section>
+  <div id="fade"></div>
+  <div id="boot-error" hidden></div>
+</main>
+<script src="./game.js"></script>
+</body>
+</html>
