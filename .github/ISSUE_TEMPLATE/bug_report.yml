@@ -1,0 +1,57 @@
+name: 遊戲錯誤回報
+description: 回報網站、規則、角色資料或模擬過程中的問題
+title: "[Bug] "
+labels: ["bug", "player-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝協助改善模擬器！請勿附上真實姓名、住址、密碼或私人對話。
+  - type: dropdown
+    id: category
+    attributes:
+      label: 問題類型
+      options:
+        - 網站／入口
+        - 角色建立／存檔
+        - 天賦／能力判定
+        - 咒語／魔藥／魔法規則
+        - NPC 行為／知識邊界
+        - 時間線／世界狀態
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: 問題描述
+      description: 發生了什麼？請描述可重現的情況。
+      placeholder: 我進行……之後，出現……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期結果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 實際結果
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 使用環境（選填）
+      placeholder: Android / Chrome / ChatGPT 等
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隱私確認
+      options:
+        - label: 我已移除真實個資、密碼及不應公開的對話內容
+          required: true
