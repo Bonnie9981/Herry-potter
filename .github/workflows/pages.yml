@@ -104,6 +104,15 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Package public assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/assets/art-direction
+          cp assets/art-direction/*.png docs/assets/art-direction/
+          test -s docs/game.js
+          test -s docs/assets/art-direction/霍格華茲圖書館奇遇-2.png
+
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
         with:
