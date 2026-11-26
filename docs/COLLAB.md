@@ -11,19 +11,18 @@
 美術驗收基準：`assets/art-direction/` 兩張參考圖與 `ART-DIRECTION.md`。工程完成、測試通過，不代表美術通過。
 
 ## 素材交接格式
-所有正式素材放在 `docs/assets/art/`（會隨 GitHub Pages 部署）。命名使用英文小寫與連字號。
+場景材質與道具放在 `docs/assets/art/`，角色立繪放在 `docs/sprites/`（都會隨 GitHub Pages 部署）。命名使用英文小寫與連字號。
 
 ### 1. 材質貼圖 `docs/assets/art/textures/`
 - PNG 或 JPG，邊長為 2 的次方（1024 或 2048），需可無縫平鋪。
 - 命名：`<材質>-<變體>.png`，例如 `stone-floor-warm.png`、`wood-dark.png`、`bookshelf-front-01.png`。
 - 在 Issue 註明一張貼圖代表的實際尺寸（例如「4 m × 4 m 石地」）。
 
-### 2. 角色圖集 `docs/assets/art/characters/<look>.png`
-- 透明背景 PNG，一列 8 格，每格 256×512 px（整張 2048×512）。
-- 第 0–1 格為待機（呼吸），第 2–7 格為行走循環。
-- 正面 3/4 朝右，已包含白色貼紙描邊；腳底位於每格由上往下約第 492 px，水平置中。
-- 不需要畫背面，引擎會以鏡像呈現背面與朝左；轉身時會經過 90° 細線。
+### 2. 角色立繪 `docs/sprites/<look>.png`
+- **每個角色只要一張全身立繪**，程式會切出上身與雙腿做待機、行走、互動動畫，並處理旋轉與鏡像。
+- 完整規格與 ChatGPT 指令範本見 [`docs/art/CHARACTER-SPRITES.md`](art/CHARACTER-SPRITES.md)（PR #9，合併後生效）。重點：正面 3/4 朝右、全身、兩腿略分開、透明背景、**不要白描邊**（程式統一加）、高度 ≥ 1000 px。
 - `<look>` 對應 `docs/js/sprites.js` 的 `LOOKS`：player、reader、curly、bookish、tall、librarian、professor、gardener、redhead。
+- 驗收頁：`docs/character-lab.html?sprite=sprites/<look>.png&zoom=3`。
 
 ### 3. 道具立牌 `docs/assets/art/props/`
 - 透明背景 PNG，單一物件。
@@ -45,6 +44,6 @@
 
 ## 待辦
 - [ ] ChatGPT：圖書館材質（石地、石牆、木頭、書架正面、地毯）
-- [ ] ChatGPT：主角與 NPC 角色圖集
+- [ ] ChatGPT：主角與 NPC 角色立繪（依 CHARACTER-SPRITES.md）
 - [ ] Claude：引擎優先讀取 `docs/assets/art/` 的圖片素材，沒有素材時退回程式繪製
 - [ ] Claude：每次素材接入後，在 Issue 回報實機截圖
