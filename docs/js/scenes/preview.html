@@ -28,6 +28,7 @@ const IDS = { hall: "大廳", courtyard: "庭院", corridor: "移動樓梯廊", 
 const q = new URLSearchParams(location.search);
 const id = IDS[q.get("scene")] ? q.get("scene") : "hall";
 const debug = q.get("debug") === "1";
+if (q.get("clean") === "1") document.head.insertAdjacentHTML("beforeend", "<style>#ui,#info{display:none}</style>");
 const ui = document.getElementById("ui");
 for (const [k, v] of Object.entries(IDS)) {
   const b = document.createElement("button"); b.textContent = v; if (k === id) b.className = "on";
@@ -71,7 +72,8 @@ scene.add(sun, sun.target);
 const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.5, 300);
 const yaw = 0.62;
 const focus = new THREE.Vector3(S.view?.x ?? cx, 0, S.view?.z ?? cz);
-let dist = S.view?.dist ?? Math.max(S.size.w, S.size.d) * 1.5;
+let dist = Number(q.get("dist")) || (S.view?.dist ?? Math.max(S.size.w, S.size.d) * 1.5);
+if (q.get("fx")) focus.set(Number(q.get("fx")), 0, Number(q.get("fz")));
 function placeCam() {
   const h = dist * Math.cos(Math.PI / 4), v = dist * Math.sin(Math.PI / 4);
   camera.position.set(focus.x + Math.sin(yaw) * h, v, focus.z + Math.cos(yaw) * h);
