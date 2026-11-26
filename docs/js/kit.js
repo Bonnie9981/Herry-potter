@@ -53,6 +53,7 @@ function box(w, h, d, material) { return new THREE.Mesh(new THREE.BoxGeometry(w,
 function cyl(rt, rb, h, material, seg = 16) { return new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), material); }
 
 export function floor(b, tex, { tile = 4, x = 0, z = 0, w = b.size.w, d = b.size.d, y = 0, roughness = 0.82, color = 0xffffff } = {}) {
+  if (tex.userData.meters) tile = tex.userData.meters; // 正式貼圖依其實際尺寸平鋪
   const m = new THREE.MeshStandardMaterial({ map: texRepeat(tex, w / tile, d / tile), roughness, color });
   const p = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
   p.rotation.x = -Math.PI / 2; p.position.set(x + w / 2, y, z + d / 2);

@@ -52,9 +52,61 @@ function toTex(c, { repeat = [1, 1], srgb = true } = {}) {
   return t;
 }
 
+// ── 正式美術貼圖 ─────────────────────────────────────────────
+// 美術（ChatGPT）把貼圖放在 docs/assets/art/textures/<名稱>.png（或 .jpg）。
+// 場景建置前會先嘗試載入；找到就取代下方程式繪製的材質，找不到就沿用程式繪製（fallback）。
+// 規格與實際尺寸見 docs/COLLAB.md。
+export const ART_TEXTURES = [
+  "stone-floor-warm", "stone-floor-grey", "stone-wall-warm",
+  "wood-dark", "wood-light",
+  "bookshelf-front-01", "bookshelf-front-02", "bookshelf-front-03",
+  "carpet-navy",
+];
+const ART_DIR = new URL("../assets/art/textures/", import.meta.url);
+const art = new Map();
+let artReady = null;
+
+function loadImage(url) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img.naturalWidth ? img : null);
+    img.onerror = () => res(null);
+    img.src = url;
+  });
+}
+
+// 場景 build() 前呼叫一次（重複呼叫會共用同一個 Promise）。
+export function preloadArt() {
+  if (typeof Image === "undefined") return Promise.resolve(art);
+  artReady ??= Promise.all(ART_TEXTURES.map(async name => {
+    for (const ext of ["png", "jpg"]) {
+      const img = await loadImage(new URL(`${name}.${ext}`, ART_DIR).href);
+      if (img) { art.set(name, img); return; }
+    }
+  })).then(() => art);
+  return artReady;
+}
+
+// 目前接入的正式貼圖名稱（給除錯與測試用）。
+export function loadedArt() { return [...art.keys()]; }
+
+function artTex(name) {
+  const img = art.get(name);
+  if (!img) return null;
+  const t = new THREE.Texture(img);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  t.userData.art = name;
+  if (name.startsWith("stone-")) t.userData.meters = 4; // 石地、石牆：一張貼圖 = 4 m × 4 m
+  return t;
+}
+
 // 石板地：一張貼圖 = 4×4 塊石板（對應 4×4 公尺）。
 export function stoneFloor(tone = "warm") {
   return cached("floor" + tone, () => {
+    const a = artTex("stone-floor-" + tone); if (a) return a;
     const S = 1024, [c, x] = canvas(S, S), r = rng(tone === "warm" ? 11 : 23);
     const base = tone === "warm" ? [32, 22, 52] : tone === "grey" ? [35, 8, 50] : [28, 18, 44];
     x.fillStyle = hsl(base[0], base[1], base[2] - 22);
@@ -87,6 +139,7 @@ export function stoneFloor(tone = "warm") {
 
 export function stoneWall(tone = "warm") {
   return cached("wall" + tone, () => {
+    const a = artTex("stone-wall-" + tone); if (a) return a;
     const W = 1024, H = 1024, [c, x] = canvas(W, H), r = rng(77);
     const hue = tone === "cool" ? 30 : 34;
     x.fillStyle = hsl(hue, 18, 30); x.fillRect(0, 0, W, H);
@@ -111,6 +164,7 @@ export function stoneWall(tone = "warm") {
 
 export function wood(tone = "dark") {
   return cached("wood" + tone, () => {
+    const a = artTex("wood-" + tone); if (a) return a;
     const S = 512, [c, x] = canvas(S, S), r = rng(tone === "dark" ? 5 : 9);
     const L = tone === "dark" ? 24 : 36;
     x.fillStyle = hsl(24, 42, L); x.fillRect(0, 0, S, S);
@@ -130,6 +184,8 @@ export function wood(tone = "dark") {
 // 書架正面：書脊排列，含層板。
 export function bookshelf(seed = 3, rows = 5) {
   return cached("shelf" + seed + "_" + rows, () => {
+    const fronts = ["bookshelf-front-01", "bookshelf-front-02", "bookshelf-front-03"].filter(n => art.has(n));
+    if (fronts.length) { const a = artTex(fronts[seed % fronts.length]); a.wrapS = a.wrapT = THREE.ClampToEdgeWrapping; return a; }
     const W = 512, H = 1024, [c, x] = canvas(W, H), r = rng(seed);
     x.fillStyle = hsl(22, 45, 14); x.fillRect(0, 0, W, H);
     const rh = H / rows;
@@ -170,6 +226,7 @@ export function bookshelf(seed = 3, rows = 5) {
 
 export function carpet(color = "navy", seed = 4) {
   return cached("carpet" + color + seed, () => {
+    const a = artTex("carpet-" + color); if (a) { a.wrapS = a.wrapT = THREE.ClampToEdgeWrapping; return a; }
     const W = 512, H = 1024, [c, x] = canvas(W, H), r = rng(seed);
     const hue = color === "navy" ? 222 : color === "red" ? 356 : color === "green" ? 150 : 40;
     x.fillStyle = hsl(hue, 38, 26); x.fillRect(0, 0, W, H);
