@@ -33,8 +33,23 @@ function sideGrad(x, x0, x1, color) {
   return g;
 }
 
+// 外部立繪（ChatGPT 等繪製的透明 PNG）：登記後會取代同名外觀的程式繪製版。
+// 規格見 docs/art/CHARACTER-SPRITES.md。hem／legs／split 省略時會從圖片透明度自動偵測。
+//   src：相對於 docs/js/ 的路徑；hem＝外袍下緣（腿開始擺動處，0–1 比例）；legs＝腿部左右範圍；split＝兩腿分界；hand＝互動光點位置
+export const SPRITES = {
+  // player: { src: "../sprites/player.png" },
+};
+
+// 執行時登記立繪（需在第一次建立該外觀的角色之前呼叫）
+export function registerSprite(look, spec) {
+  SPRITES[look] = spec;
+  atlasCache.delete(look);
+}
+
 // 角色外觀規格
 export const LOOKS = {
+  // image：依美術基準繪製的立繪（透明 PNG，正面 3/4 朝右）；載入前以透明畫面代替，不閃出程式繪製版
+  //   hem＝外袍下緣（腿部開始擺動的高度）、legs＝腿部左右範圍、split＝兩腿分界、hand＝持杖手的位置（皆為圖片比例）
   player: { skin: "#f2cdb0", hair: "#3b2a24", hairStyle: "longwave", eyes: "#4a3426", house: ["#8e2430", "#d7a645"], robe: "#2b2a2e", lower: "skirt" },
   reader: { skin: "#f0c9a6", hair: "#c89a5a", hairStyle: "short", eyes: "#3f5b6e", house: ["#22406e", "#b7a06a"], robe: "#29292d", lower: "trousers" },
   curly: { skin: "#f3d0b5", hair: "#9a6a45", hairStyle: "curly", eyes: "#5a3b26", house: ["#2c5a3a", "#c0c4c8"], robe: "#2a2a2c", lower: "skirt" },
@@ -224,12 +239,12 @@ function drawHat(x, L, cx, hy) {
   x.fillStyle = L.house[1]; x.fillRect(cx - 44, hy - 80, 94, 9);
 }
 
-function stickerize(src, r) {
+function stickerize(src, r, color = "#fffaf0") {
   const c = document.createElement("canvas"); c.width = src.width; c.height = src.height;
   const x = c.getContext("2d");
   // 白色描邊：多方向位移輪廓
   const sil = document.createElement("canvas"); sil.width = src.width; sil.height = src.height;
-  const s = sil.getContext("2d"); s.drawImage(src, 0, 0); s.globalCompositeOperation = "source-in"; s.fillStyle = "#fffaf0"; s.fillRect(0, 0, sil.width, sil.height);
+  const s = sil.getContext("2d"); s.drawImage(src, 0, 0); s.globalCompositeOperation = "source-in"; s.fillStyle = color; s.fillRect(0, 0, sil.width, sil.height);
   for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; x.drawImage(sil, Math.cos(a) * r, Math.sin(a) * r); }
   x.drawImage(sil, 0, 0);
   // 描邊外圈淡陰影，增加紙片厚度感
@@ -375,48 +390,163 @@ function drawWand(x, L, cx, sh, rot, shorten, spark) {
 }
 
 const atlasCache = new Map();
+const EW = 8; // 紙緣圖集每格寬度
+
+// 共用：把一格畫面貼上描邊後寫進圖集，並依每列是否有像素產生紙緣圖集
+function writeCell(atlasCtx, edgeCtx, st, f, cw, ch) {
+  const col = f % COLS, row = Math.floor(f / COLS);
+  atlasCtx.clearRect(col * cw, row * ch, cw, ch);
+  atlasCtx.drawImage(st, col * cw, row * ch);
+  const data = st.getContext("2d").getImageData(0, 0, cw, ch).data;
+  edgeCtx.clearRect(col * EW, row * ch, EW, ch);
+  for (let y = 0; y < ch; y++) {
+    let on = false;
+    for (let xx = 0; xx < cw; xx += 2) if (data[(y * cw + xx) * 4 + 3] > 128) { on = true; break; }
+    if (!on) continue;
+    edgeCtx.fillStyle = "#fbf5ea"; edgeCtx.fillRect(col * EW, row * ch + y, EW, 1);
+    edgeCtx.fillStyle = "#d9c6a6"; edgeCtx.fillRect(col * EW + 3, row * ch + y, 2, 1);
+  }
+}
+
+function newAtlas(cw, ch) {
+  const atlas = document.createElement("canvas"); atlas.width = cw * COLS; atlas.height = ch * ROWS;
+  const edge = document.createElement("canvas"); edge.width = EW * COLS; edge.height = ch * ROWS;
+  const mk = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  const out = { tex: mk(atlas), edge: mk(edge), cell: [cw, ch], ready: Promise.resolve() };
+  out.edge.generateMipmaps = false; out.edge.minFilter = THREE.LinearFilter;
+  return out;
+}
+
 function buildAtlas(key) {
   const L = LOOKS[key] || LOOKS.reader;
-  const atlas = document.createElement("canvas"); atlas.width = FRAME_W * COLS; atlas.height = FRAME_H * ROWS;
-  const ax = atlas.getContext("2d");
-  // 紙緣圖集：每格 8px 寬，只要該列有角色像素就畫成白色紙緣
-  const EW = 8;
-  const edge = document.createElement("canvas"); edge.width = EW * COLS; edge.height = FRAME_H * ROWS;
-  const ex = edge.getContext("2d");
+  const sp = SPRITES[key] || L.image;
+  if (sp) return buildImageAtlas(key, { image: sp });
+  const out = newAtlas(FRAME_W, FRAME_H);
+  const ax = out.tex.image.getContext("2d"), ex = out.edge.image.getContext("2d");
   for (let f = 0; f < FRAMES; f++) {
     const fc = document.createElement("canvas"); fc.width = FRAME_W; fc.height = FRAME_H;
     const fx = fc.getContext("2d");
     fx.translate(FRAME_W * 0.06, FRAME_H * 0.05); fx.scale(0.88, 0.9);
     drawFrame(fx, L, f);
     paintTexture(fc, 100 + f);
-    const st = stickerize(fc, 7);
-    const col = f % COLS, row = Math.floor(f / COLS);
-    ax.drawImage(st, col * FRAME_W, row * FRAME_H);
-    const data = st.getContext("2d").getImageData(0, 0, FRAME_W, FRAME_H).data;
-    for (let y = 0; y < FRAME_H; y++) {
-      let on = false;
-      for (let xx = 0; xx < FRAME_W; xx += 2) if (data[(y * FRAME_W + xx) * 4 + 3] > 128) { on = true; break; }
-      if (!on) continue;
-      ex.fillStyle = "#fbf5ea"; ex.fillRect(col * EW, row * FRAME_H + y, EW, 1);
-      ex.fillStyle = "#d9c6a6"; ex.fillRect(col * EW + 3, row * FRAME_H + y, 2, 1);
-    }
+    writeCell(ax, ex, stickerize(fc, 7), f, FRAME_W, FRAME_H);
   }
-  const mk = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-  const out = { tex: mk(atlas), edge: mk(edge) };
-  out.edge.generateMipmaps = false; out.edge.minFilter = THREE.LinearFilter;
   atlasCache.set(key, out);
   return out;
+}
+
+// ---- 繪製立繪：切成上身與兩條腿，以切件方式做出待機、行走、互動 ----
+const IMG_SCALE = 1.5; // 立繪圖集解析度是程式繪製版的 1.5 倍
+function buildImageAtlas(key, L) {
+  const cw = FRAME_W * IMG_SCALE, ch = FRAME_H * IMG_SCALE;
+  const out = newAtlas(cw, ch);
+  const img = new Image();
+  img.decoding = "async";
+  out.ready = new Promise((resolve) => {
+    img.onload = () => {
+      Object.assign(L.image, { ...detectLegs(img), ...L.image });
+      const ax = out.tex.image.getContext("2d"), ex = out.edge.image.getContext("2d");
+      for (let f = 0; f < FRAMES; f++) writeCell(ax, ex, stickerize(drawImageFrame(img, L.image, f, cw, ch), 6 * IMG_SCALE, "#fff4e2"), f, cw, ch);
+      out.tex.needsUpdate = true; out.edge.needsUpdate = true;
+      resolve();
+    };
+    img.onerror = () => { console.warn("角色立繪載入失敗：" + L.image.src); resolve(); };
+  });
+  img.src = new URL(L.image.src, import.meta.url).href;
+  atlasCache.set(key, out);
+  return out;
+}
+
+// 從透明度自動找腿部：由下往上，寬度明顯窄於全身最寬處的列視為腿
+function detectLegs(img) {
+  const w = 200, h = Math.round((img.height / img.width) * w);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, h);
+  const d = x.getImageData(0, 0, w, h).data;
+  const rows = [];
+  for (let y = 0; y < h; y++) {
+    let l = -1, r = -1;
+    for (let i = 0; i < w; i++) if (d[(y * w + i) * 4 + 3] > 128) { if (l < 0) l = i; r = i; }
+    rows.push(l < 0 ? null : [l, r]);
+  }
+  const maxW = Math.max(...rows.map((v) => (v ? v[1] - v[0] : 0)));
+  let y = h - 1; while (y > 0 && !rows[y]) y--;
+  let l = w, r = 0; const bottom = y;
+  while (y > h * 0.5 && rows[y] && rows[y][1] - rows[y][0] < maxW * 0.5) { l = Math.min(l, rows[y][0]); r = Math.max(r, rows[y][1]); y--; }
+  if (bottom - y < h * 0.08) return { hem: 0.75, legs: [0.35, 0.72], split: 0.53, hand: [0.85, 0.6] };
+  return { hem: (y + 2) / h, legs: [l / w, (r + 1) / w], split: (l + r + 1) / 2 / w, hand: [Math.min(0.9, (r + 1) / w + 0.15), 0.6] };
+}
+
+function drawImageFrame(img, spec, f, cw, ch) {
+  const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+  const x = c.getContext("2d");
+  x.imageSmoothingQuality = "high";
+  // 腳底對齊程式繪製版的地面線，身高約佔格子 86%
+  const groundY = (GROUND / FRAME_H) * ch, H = ch * 0.86, W = H * (img.width / img.height);
+  const left = (cw - W) / 2, top = groundY - H;
+  const iw = img.width, ih = img.height;
+  let walking = false, phase = 0, breathe = 0, raise = 0, spark = 0;
+  if (f < 4) breathe = [0, 0.5, 1, 0.5][f];
+  else if (f < 12) { walking = true; phase = ((f - 4) / 8) * Math.PI * 2; }
+  else { const k = f - 12; raise = ease(Math.min(1, k / 2.5)); spark = k >= 2 ? 0.45 + 0.55 * Math.abs(Math.sin(k * 1.3)) : 0; }
+  const hemY = spec.hem * ih, splitX = spec.split * iw;
+  const legX0 = spec.legs[0] * iw, legX1 = spec.legs[1] * iw;
+  // 行走：兩腿以外袍下緣為軸前後擺動，擺動腿抬起；身體在跨步最大時下沉
+  const amp = 0.16;
+  const aFar = walking ? Math.sin(phase + Math.PI) * amp : 0, aNear = walking ? Math.sin(phase) * amp : 0;
+  const liftFar = walking ? Math.max(0, Math.cos(phase + Math.PI)) * 0.012 * H : 0;
+  const liftNear = walking ? Math.max(0, Math.cos(phase)) * 0.012 * H : 0;
+  const bob = walking ? (1 - Math.cos(aNear)) * 0.5 * H * 0.9 : 0;
+  const s = H / ih;
+  function leg(x0, x1, ang, lift, dark) {
+    const px = left + ((x0 + x1) / 2) * s, py = top + hemY * s + bob;
+    x.save(); x.translate(px, py - lift); x.rotate(-ang);
+    x.drawImage(img, x0, hemY - 2, x1 - x0, ih - hemY + 2, (x0 - (x0 + x1) / 2) * s, -2 * s, (x1 - x0) * s, (ih - hemY + 2) * s);
+    if (dark) { x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(20,10,10,.22)"; x.fillRect(-W, -10, W * 2, H); }
+    x.restore();
+  }
+  // 遠側腿（較暗）→ 近側腿 → 上身
+  x.save();
+  leg(splitX, legX1, aFar, liftFar, true);
+  leg(legX0, splitX, aNear, liftNear, false);
+  x.restore();
+  // 上身（外袍下緣以上）：呼吸時以腰部為基準微微伸縮；走路時隨步伐起伏並微前傾
+  const upH = hemY + 1;
+  x.save();
+  const hipX = left + W / 2, hipY = top + hemY * s + bob;
+  x.translate(hipX, hipY);
+  if (walking) x.rotate(0.025);
+  if (raise) x.rotate(0.02 * raise);
+  x.scale(1, 1 + breathe * 0.008);
+  x.drawImage(img, 0, 0, iw, upH, -W / 2, -hemY * s, W, upH * s);
+  x.restore();
+  // 互動：手邊升起魔法光點
+  if (spark > 0) {
+    const hx = left + spec.hand[0] * W, hy = top + spec.hand[1] * H - raise * H * 0.04;
+    const R = 0.07 * H * spark, g = x.createRadialGradient(hx, hy, 0, hx, hy, R);
+    g.addColorStop(0, "rgba(255,250,225,.95)"); g.addColorStop(0.35, "rgba(255,214,130,.6)"); g.addColorStop(1, "rgba(255,190,90,0)");
+    x.fillStyle = g; x.beginPath(); x.arc(hx, hy, R, 0, 7); x.fill();
+    x.fillStyle = "#fffbea"; x.beginPath();
+    for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4 + spark, rr = i % 2 ? R * 0.12 : R * 0.45; x.lineTo(hx + Math.cos(a) * rr, hy + Math.sin(a) * rr); }
+    x.closePath(); x.fill();
+  }
+  return c;
 }
 
 export function characterAtlas(key) {
   return (atlasCache.get(key) || buildAtlas(key)).tex;
 }
 
+// 立繪角色要等圖片載入；程式繪製角色立即完成
+export function characterReady(key) {
+  return (atlasCache.get(key) || buildAtlas(key)).ready;
+}
+
 // 頭像（對話框用）：取待機第 0 格的上半部
 export function portraitDataURL(key) {
-  const tex = characterAtlas(key);
+  const tex = characterAtlas(key), cw = tex.image.width / COLS;
   const c = document.createElement("canvas"); c.width = 160; c.height = 160;
-  c.getContext("2d").drawImage(tex.image, 0, 0, FRAME_W, FRAME_W, 0, 0, 160, 160);
+  c.getContext("2d").drawImage(tex.image, 0, cw * 0.05, cw, cw, 0, 0, 160, 160);
   return c.toDataURL();
 }
 
@@ -437,6 +567,8 @@ export class PaperCharacter {
     const base = atlasCache.get(key);
     this.tex = base.tex.clone(); this.tex.needsUpdate = true; this.tex.repeat.set(1 / COLS, 1 / ROWS);
     this.edgeTex = base.edge.clone(); this.edgeTex.needsUpdate = true; this.edgeTex.repeat.set(1 / COLS, 1 / ROWS);
+    // 立繪圖片載入完成後，複本貼圖也要重新上傳
+    this.ready = base.ready.then(() => { this.tex.needsUpdate = true; this.edgeTex.needsUpdate = true; });
     const w = height * (FRAME_W / FRAME_H);
     this.w = w;
     const yOff = height / 2 - height * 0.035;

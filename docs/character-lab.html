@@ -52,7 +52,7 @@ body.noui .panel{display:none}
 <div id="hint" class="panel">WASD／方向鍵移動　點地面行走　E 互動</div>
 <script type="module">
 import * as THREE from "three";
-import { PaperCharacter, LOOKS } from "./js/sprites.js";
+import { PaperCharacter, LOOKS, registerSprite } from "./js/sprites.js";
 import { stoneFloor, stoneWall, wood, carpet, blob } from "./js/textures.js";
 
 const q = new URLSearchParams(location.search);
@@ -109,6 +109,8 @@ function withBlob(c) { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.5
 
 // 玩家
 let lookKey = q.get("look") && LOOKS[q.get("look")] ? q.get("look") : "player";
+// 試套外部立繪：?sprite=sprites/xxx.png（相對於 docs/）
+if (q.get("sprite")) registerSprite(lookKey, { src: "../" + q.get("sprite") });
 let player = makePlayer(lookKey);
 function makePlayer(key) {
   const c = withBlob(new PaperCharacter(key)); c.group.position.set(5.2, 0, 5.2); c.addXray(); scene.add(c.group); return c;
