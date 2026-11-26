@@ -80,6 +80,7 @@ const available = new Set();
 async function loadSceneModule(id) {
   if (sceneCache.has(id)) return sceneCache.get(id);
   const mod = await import(`./scenes/${id}.js`);
+  await T.preloadArt(); // 正式美術貼圖優先，缺圖時用程式繪製
   const data = mod.build({ THREE, tex: T, kit: await import("./kit.js") });
   sceneCache.set(id, data);
   return data;
@@ -679,5 +680,5 @@ export async function boot() {
   document.body.classList.add("ready");
   requestAnimationFrame(frame);
   // 測試掛勾（不影響遊玩）
-  window.__game = { state, player, get world() { return world; }, findPath, blockedAt, enterScene, travel, camera, renderer, get director() { return director; }, approach, allHotspots, setTime: m => { state.minutes = m; } };
+  window.__game = { state, player, get world() { return world; }, findPath, blockedAt, enterScene, travel, camera, renderer, get director() { return director; }, approach, allHotspots, setTime: m => { state.minutes = m; }, art: () => T.loadedArt() };
 }
