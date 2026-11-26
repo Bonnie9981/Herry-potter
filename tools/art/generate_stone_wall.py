@@ -12,11 +12,11 @@ out.parent.mkdir(parents=True, exist_ok=True)
 
 # Four repeating courses; matching top/bottom course boundaries make the tile repeat vertically.
 course_h = SIZE // COURSES
-mortar = (91, 82, 72)
+mortar = (119, 118, 111)
 img = Image.new("RGB", (SIZE, SIZE), mortar)
 draw = ImageDraw.Draw(img)
-stones = [(158,148,132),(164,153,137),(151,141,126),(169,158,141),
-          (156,146,131),(162,151,135),(154,143,128),(166,155,139)]
+stones = [(178,176,165),(183,180,169),(171,170,160),(186,182,171),
+          (175,174,164),(181,179,168),(173,172,162),(184,181,170)]
 for row in range(COURSES):
     y0 = row * course_h
     # Alternating, irregular ashlar joints. The pattern is periodic at the left/right edges.
