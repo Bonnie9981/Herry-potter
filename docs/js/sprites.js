@@ -33,12 +33,24 @@ function sideGrad(x, x0, x1, color) {
   return g;
 }
 
+// 外部立繪（ChatGPT 等繪製的透明 PNG）：登記後會取代同名外觀的程式繪製版。
+// 規格見 docs/art/CHARACTER-SPRITES.md。hem／legs／split 省略時會從圖片透明度自動偵測。
+//   src：相對於 docs/js/ 的路徑；hem＝外袍下緣（腿開始擺動處，0–1 比例）；legs＝腿部左右範圍；split＝兩腿分界；hand＝互動光點位置
+export const SPRITES = {
+  // player: { src: "../sprites/player.png" },
+};
+
+// 執行時登記立繪（需在第一次建立該外觀的角色之前呼叫）
+export function registerSprite(look, spec) {
+  SPRITES[look] = spec;
+  atlasCache.delete(look);
+}
+
 // 角色外觀規格
 export const LOOKS = {
   // image：依美術基準繪製的立繪（透明 PNG，正面 3/4 朝右）；載入前以透明畫面代替，不閃出程式繪製版
   //   hem＝外袍下緣（腿部開始擺動的高度）、legs＝腿部左右範圍、split＝兩腿分界、hand＝持杖手的位置（皆為圖片比例）
-  player: { skin: "#f2cdb0", hair: "#8a4f2a", hairStyle: "longwave", eyes: "#7a4a1e", house: ["#2f6b6a", "#c9a24a"], robe: "#2b2a2e", lower: "skirt",
-    image: { src: "../assets/characters/player.png", hem: 0.745, legs: [0.35, 0.73], split: 0.535, hand: [0.9, 0.62] } },
+  player: { skin: "#f2cdb0", hair: "#3b2a24", hairStyle: "longwave", eyes: "#4a3426", house: ["#8e2430", "#d7a645"], robe: "#2b2a2e", lower: "skirt" },
   reader: { skin: "#f0c9a6", hair: "#c89a5a", hairStyle: "short", eyes: "#3f5b6e", house: ["#22406e", "#b7a06a"], robe: "#29292d", lower: "trousers" },
   curly: { skin: "#f3d0b5", hair: "#9a6a45", hairStyle: "curly", eyes: "#5a3b26", house: ["#2c5a3a", "#c0c4c8"], robe: "#2a2a2c", lower: "skirt" },
   bookish: { skin: "#d9a67e", hair: "#1f1a1a", hairStyle: "bob", eyes: "#2e2018", house: ["#b38a2a", "#2b2b2b"], robe: "#28272b", lower: "skirt", book: true },
@@ -407,7 +419,8 @@ function newAtlas(cw, ch) {
 
 function buildAtlas(key) {
   const L = LOOKS[key] || LOOKS.reader;
-  if (L.image) return buildImageAtlas(key, L);
+  const sp = SPRITES[key] || L.image;
+  if (sp) return buildImageAtlas(key, { image: sp });
   const out = newAtlas(FRAME_W, FRAME_H);
   const ax = out.tex.image.getContext("2d"), ex = out.edge.image.getContext("2d");
   for (let f = 0; f < FRAMES; f++) {
@@ -431,6 +444,7 @@ function buildImageAtlas(key, L) {
   img.decoding = "async";
   out.ready = new Promise((resolve) => {
     img.onload = () => {
+      Object.assign(L.image, { ...detectLegs(img), ...L.image });
       const ax = out.tex.image.getContext("2d"), ex = out.edge.image.getContext("2d");
       for (let f = 0; f < FRAMES; f++) writeCell(ax, ex, stickerize(drawImageFrame(img, L.image, f, cw, ch), 6 * IMG_SCALE, "#fff4e2"), f, cw, ch);
       out.tex.needsUpdate = true; out.edge.needsUpdate = true;
@@ -441,6 +455,26 @@ function buildImageAtlas(key, L) {
   img.src = new URL(L.image.src, import.meta.url).href;
   atlasCache.set(key, out);
   return out;
+}
+
+// 從透明度自動找腿部：由下往上，寬度明顯窄於全身最寬處的列視為腿
+function detectLegs(img) {
+  const w = 200, h = Math.round((img.height / img.width) * w);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, h);
+  const d = x.getImageData(0, 0, w, h).data;
+  const rows = [];
+  for (let y = 0; y < h; y++) {
+    let l = -1, r = -1;
+    for (let i = 0; i < w; i++) if (d[(y * w + i) * 4 + 3] > 128) { if (l < 0) l = i; r = i; }
+    rows.push(l < 0 ? null : [l, r]);
+  }
+  const maxW = Math.max(...rows.map((v) => (v ? v[1] - v[0] : 0)));
+  let y = h - 1; while (y > 0 && !rows[y]) y--;
+  let l = w, r = 0; const bottom = y;
+  while (y > h * 0.5 && rows[y] && rows[y][1] - rows[y][0] < maxW * 0.5) { l = Math.min(l, rows[y][0]); r = Math.max(r, rows[y][1]); y--; }
+  if (bottom - y < h * 0.08) return { hem: 0.75, legs: [0.35, 0.72], split: 0.53, hand: [0.85, 0.6] };
+  return { hem: (y + 2) / h, legs: [l / w, (r + 1) / w], split: (l + r + 1) / 2 / w, hand: [Math.min(0.9, (r + 1) / w + 0.15), 0.6] };
 }
 
 function drawImageFrame(img, spec, f, cw, ch) {
