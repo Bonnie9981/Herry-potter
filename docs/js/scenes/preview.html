@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>場景預覽</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#17120f;color:#f4e7cf;font-family:Georgia,"Noto Serif TC",serif}
+#ui{position:fixed;top:10px;left:10px;z-index:2;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100vw - 20px)}
+#ui button{font:inherit;font-size:13px;color:inherit;background:#33251dd9;border:1px solid #b9945d;border-radius:6px;padding:6px 10px;cursor:pointer}
+#ui button.on{background:#6a4b2e}
+#info{position:fixed;left:10px;bottom:10px;z-index:2;font:12px/1.5 system-ui,sans-serif;background:#211914cc;border:1px solid #b9945d88;border-radius:6px;padding:6px 10px;max-width:calc(100vw - 40px)}
+canvas{display:block}
+.tag{position:fixed;z-index:1;transform:translate(-50%,-100%);font:12px system-ui,sans-serif;background:#241a14e0;border:1px solid #e4c58c;border-radius:5px;padding:2px 6px;pointer-events:none;white-space:nowrap}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="ui"></div>
+<div id="info">載入中…</div>
+<script type="module">
+// 獨立預覽：?scene=hall&debug=1（debug 顯示碰撞盒與熱點）&walk=0（不放角色）
+import * as THREE from "three";
+import * as tex from "../textures.js";
+import { PaperCharacter } from "../sprites.js";
+
+const IDS = { hall: "大廳", courtyard: "庭院", corridor: "移動樓梯廊", classroom: "魔咒學教室", greenhouse: "溫室", grounds: "黑湖湖畔" };
+const q = new URLSearchParams(location.search);
+const id = IDS[q.get("scene")] ? q.get("scene") : "hall";
+const debug = q.get("debug") === "1";
+if (q.get("clean") === "1") document.head.insertAdjacentHTML("beforeend", "<style>#ui,#info{display:none}</style>");
+const ui = document.getElementById("ui");
+for (const [k, v] of Object.entries(IDS)) {
+  const b = document.createElement("button"); b.textContent = v; if (k === id) b.className = "on";
+  b.onclick = () => { q.set("scene", k); location.search = q.toString(); };
+  ui.append(b);
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.append(renderer.domElement);
+window.__renderer = renderer;
+
+const mod = await import(`./${id}.js`);
+const S = mod.build({ THREE, tex, kit: null });
+const scene = new THREE.Scene();
+scene.add(S.group);
+
+// 燈光：依 CONTRACT 的 lighting 描述，與引擎相同的做法
+const L = S.lighting;
+scene.background = new THREE.Color(L.background ?? (L.indoor ? 0x1a130e : 0xe9c08c));
+if (L.fog) scene.fog = new THREE.Fog(L.fog[0], L.fog[1], L.fog[2]);
+scene.add(new THREE.HemisphereLight(L.skyColor ?? 0xf2d3a6, L.ambient ?? 0x6a4a36, L.hemiIntensity ?? 0.9));
+const sun = new THREE.DirectionalLight(L.sunColor ?? 0xffc890, L.sunIntensity ?? 2.4);
+const cx = S.size.w / 2, cz = S.size.d / 2;
+const sd = new THREE.Vector3(...L.sunDir).normalize();
+sun.position.set(cx + sd.x * 40, sd.y * 40, cz + sd.z * 40);
+sun.target.position.set(cx, 0, cz);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const R = Math.max(S.size.w, S.size.d) * 0.75;
+Object.assign(sun.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 1, far: 120 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+
+// 鏡頭：fov 30、yaw 0.62、俯角約 45°（CONTRACT）
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.5, 300);
+const yaw = 0.62;
+const focus = new THREE.Vector3(S.view?.x ?? cx, 0, S.view?.z ?? cz);
+let dist = Number(q.get("dist")) || (S.view?.dist ?? Math.max(S.size.w, S.size.d) * 1.5);
+if (q.get("fx")) focus.set(Number(q.get("fx")), 0, Number(q.get("fz")));
+function placeCam() {
+  const h = dist * Math.cos(Math.PI / 4), v = dist * Math.sin(Math.PI / 4);
+  camera.position.set(focus.x + Math.sin(yaw) * h, v, focus.z + Math.cos(yaw) * h);
+  camera.lookAt(focus);
+}
+placeCam();
+addEventListener("wheel", (e) => { dist = Math.min(90, Math.max(8, dist * (1 + Math.sign(e.deltaY) * 0.08))); placeCam(); });
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// 參考角色：放在出生點與 npcSpots，確認比例
+const chars = [];
+if (q.get("walk") !== "0") {
+  const looks = ["reader", "curly", "bookish", "tall", "redhead", "professor", "gardener"];
+  const p = new PaperCharacter("player"); p.group.position.set(S.spawn.x, 0, S.spawn.z); scene.add(p.group); chars.push(p);
+  Object.values(S.npcSpots || {}).slice(0, 4).forEach(([x, z], i) => { const c = new PaperCharacter(looks[i % looks.length]); c.group.position.set(x, S.groundY?.(x, z) ?? 0, z); scene.add(c.group); chars.push(c); });
+}
+
+if (debug) {
+  for (const c of S.colliders) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(c.w, 0.1, c.d), new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.45, depthTest: false }));
+    m.position.set(c.x, 0.06, c.z); scene.add(m);
+  }
+  for (const e of S.exits || []) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(e.w, 0.1, e.d), new THREE.MeshBasicMaterial({ color: 0x30a0ff, transparent: true, opacity: 0.5, depthTest: false }));
+    m.position.set(e.x, 0.08, e.z); scene.add(m);
+  }
+}
+const tags = [];
+if (debug) for (const h of [...S.hotspots, ...(S.exits || []).map((e) => ({ name: "→ " + e.label, x: e.x, z: e.z }))]) {
+  const el = document.createElement("div"); el.className = "tag"; el.textContent = h.name; document.body.append(el);
+  tags.push([el, new THREE.Vector3(h.x, 2, h.z)]);
+}
+
+document.getElementById("info").textContent = `${S.name}（${S.floorLabel}）　${S.size.w}×${S.size.d} m　碰撞 ${S.colliders.length}　熱點 ${S.hotspots.length}　出口 ${(S.exits || []).length}　滾輪縮放　?debug=1 顯示碰撞`;
+
+const clock = new THREE.Clock();
+let frames = 0;
+function loop() {
+  const dt = Math.min(0.05, clock.getDelta());
+  S.update?.(dt, { day: 1, minutes: 14 * 60 + 20 });
+  chars.forEach((c) => c.update(dt, yaw));
+  renderer.render(scene, camera);
+  for (const [el, v] of tags) { const p = v.clone().project(camera); el.style.left = (p.x + 1) / 2 * innerWidth + "px"; el.style.top = (1 - p.y) / 2 * innerHeight + "px"; }
+  if (++frames === 3) document.body.dataset.ready = "1";
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
