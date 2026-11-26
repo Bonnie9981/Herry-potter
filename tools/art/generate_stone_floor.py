@@ -8,12 +8,12 @@ SIZE = 2048
 random.seed(6191)
 out = Path("docs/assets/art/textures/stone-floor-warm.png")
 out.parent.mkdir(parents=True, exist_ok=True)
-img = Image.new("RGB", (SIZE, SIZE), (68, 57, 49))
+img = Image.new("RGB", (SIZE, SIZE), (103, 102, 96))
 cell, gap = SIZE // 4, 12
-palette = [(117,101,85),(109,94,80),(123,106,88),(113,97,82),
-(105,91,78),(119,103,86),(111,96,82),(126,108,89),
-(114,99,84),(106,91,77),(121,104,87),(110,95,81),
-(118,101,84),(108,94,81),(124,107,89),(112,97,83)]
+palette = [(151,149,139),(145,145,137),(157,154,144),(149,149,141),
+(143,143,135),(154,152,142),(147,147,139),(160,156,145),
+(150,149,140),(144,143,135),(156,153,143),(147,146,138),
+(153,151,141),(146,145,137),(159,155,144),(149,148,139)]
 for row in range(4):
     for col in range(4):
         x0,y0=col*cell,row*cell
@@ -37,7 +37,7 @@ for row in range(4):
         d=ImageDraw.Draw(img)
         for _ in range(240):
             cx=x0+random.randint(18,cell-18); cy=y0+random.randint(18,cell-18)
-            rad=random.choice((1,1,2,3)); delta=random.choice((-16,-11,-7,6,9))
+            rad=random.choice((1,1,2,3)); delta=random.choice((-8,-5,-3,3,4))
             color=tuple(max(0,min(255,c+delta)) for c in base)
             d.ellipse((cx-rad,cy-rad,cx+rad,cy+rad),fill=color)
 # Subtle nondirectional mineral grain, no baked shadows or highlights.
