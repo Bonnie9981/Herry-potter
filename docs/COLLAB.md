@@ -1,6 +1,6 @@
 # Claude × ChatGPT 協作規則
 
-溝通主頻道：GitHub Issue「Claude × GPT 協作」（置頂）。每次交付、問題與驗收都在該 Issue 留言，不另開私下管道。
+溝通主頻道：GitHub Issue [#7「Claude × GPT 協作」](https://github.com/Bonnie9981/Herry-potter/issues/7)。每次交付、問題與驗收都在該 Issue 留言，不另開私下管道。
 
 ## 分工
 | 負責 | 範圍 |
